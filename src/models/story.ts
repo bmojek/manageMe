@@ -1,3 +1,5 @@
+import { Task } from "./task";
+
 export enum Priority {
   Low = "Low",
   Medium = "Medium",
@@ -19,6 +21,7 @@ export class Story {
   creationDate: Date;
   status: Status;
   owner: number;
+  task?: Task[];
 
   constructor(
     id: number,

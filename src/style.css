@@ -27,3 +27,6 @@
   padding: 30px;
   box-sizing: border-box;
 }
+.userList {
+  float: right;
+}

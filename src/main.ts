@@ -5,14 +5,16 @@ import {
   deleteProject,
   updateProject,
   getProjectById,
-} from "./project.ts";
-import { User } from "./user";
-import { UserSessionManager } from "./userSessionManager";
+} from "./services/projectManager.ts";
+import { renderProjects } from "./views/projectView.ts";
+import { User, mockUsers } from "./models/user.ts";
+import { UserSessionManager } from "./services/userSessionManager.ts";
 
+const users: User[] = [];
 const userManager = new UserSessionManager();
-const user = new User(1, "Bartek", "Mojek");
+users.push(...mockUsers());
 
-userManager.login(user);
+userManager.login(users[0]);
 
 let Projects = getAllProjects();
 
@@ -21,7 +23,7 @@ function refreshProjects() {
   const appDiv = document.querySelector<HTMLDivElement>("#app");
   if (appDiv) {
     appDiv.innerHTML = `
-      <div>
+
         <h1>MenageAPP</h1>
         <button class="addBtn">Stwórz nowy projekt</Button>
         <div>
@@ -32,29 +34,35 @@ function refreshProjects() {
               : "Nie wybrano projektu"
           } </p>
         </div>
+        <div class="userList">
+        <p>Lista użytkowników:</p>
+        <ul>
+          ${users
+            .map(
+              (user) =>
+                `<li>${user.firstName} ${user.lastName} ${user.role}</li>`
+            )
+            .join("")}
+          </ul>
+        </div>
         <div class="projectContainer">
-        ${
-          userManager.currentProjectId == null
-            ? Projects.map(
-                (project) => `
-            <div class="Project" data-id="${project.id}">
-              <h2>${project.name}</h2>
-              <p>${project.desc}</p>
-              <button class="modBtn" data-id="${project.id}">Modify</button>
-              <button class="delBtn" data-id="${project.id}">Delete</button>
-              <button class="chooseBtn" data-id="${project.id}">Wybierz projekt</button>
-            </div>
-          `
-              ).join("")
-            : `<div class="" data-id="${userManager.currentProjectId}">   
-              <button class="exitProject">Wyjdź z projektu</button>    
-              <h2>${getProjectById(userManager.currentProjectId)?.name}</h2>
-              <p>${getProjectById(userManager.currentProjectId)?.desc}</p>
-            </div>`
-        }
+      ${
+        userManager.currentProjectId == null
+          ? Projects.map(
+              (project) => `
+          <div class="Project" data-id="${project.id}">
+            <h2>${project.name}</h2>
+            <p>${project.desc}</p>
+            <button class="modBtn" data-id="${project.id}">Modify</button>
+            <button class="delBtn" data-id="${project.id}">Delete</button>
+            <button class="chooseBtn" data-id="${project.id}">Wybierz projekt</button>
+          </div>
+        `
+            ).join("")
+          : renderProjects(userManager.currentProjectId, userManager)
+      }
+    </div>
 
-      </div>
-      </div>
     `;
   }
 }
