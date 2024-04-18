@@ -5,16 +5,20 @@ export class UserSessionManager {
 
   loggedInUser: User | null;
   currentProjectId: number | null;
+  currentStoryId: number | null;
 
   constructor() {
     const data = localStorage.getItem(UserSessionManager.STORAGE_KEY);
     if (data) {
-      const { loggedInUser, currentProjectId } = JSON.parse(data);
+      const { loggedInUser, currentProjectId, currentStoryId } =
+        JSON.parse(data);
       this.loggedInUser = loggedInUser;
       this.currentProjectId = currentProjectId;
+      this.currentStoryId = currentStoryId;
     } else {
       this.loggedInUser = null;
       this.currentProjectId = null;
+      this.currentStoryId = null;
     }
   }
 
@@ -22,6 +26,7 @@ export class UserSessionManager {
     const data = {
       loggedInUser: this.loggedInUser,
       currentProjectId: this.currentProjectId,
+      currentStoryId: this.currentStoryId,
     };
     localStorage.setItem(UserSessionManager.STORAGE_KEY, JSON.stringify(data));
   }
@@ -34,11 +39,17 @@ export class UserSessionManager {
   logout() {
     this.loggedInUser = null;
     this.currentProjectId = null;
+    this.currentStoryId = null;
     this.saveToLocalStorage();
   }
 
   setCurrentProject(projectId: number | null) {
     this.currentProjectId = projectId;
+    this.saveToLocalStorage();
+  }
+
+  setCurrentStory(storyId: number | null) {
+    this.currentStoryId = storyId;
     this.saveToLocalStorage();
   }
 }

@@ -21,7 +21,7 @@ export class Story {
   creationDate: Date;
   status: Status;
   owner: number;
-  task?: Task[];
+  tasks?: Task[];
 
   constructor(
     id: number,

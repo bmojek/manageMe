@@ -17,9 +17,8 @@ export class Task {
   name: string;
   description: string;
   priority: Priority;
-  storyId: number;
-  story: string;
-  estimatedTime: number;
+  story: number;
+  estimatedTime?: number;
   status: Status;
   startDate?: Date;
   endDate?: Date;
@@ -32,8 +31,7 @@ export class Task {
     name: string,
     description: string,
     priority: Priority,
-    storyId: number,
-    story: string,
+    story: number,
     estimatedTime: number,
     status: Status,
     addedDate: Date,
@@ -45,7 +43,6 @@ export class Task {
     this.name = name;
     this.description = description;
     this.priority = priority;
-    this.storyId = storyId;
     this.story = story;
     this.estimatedTime = estimatedTime;
     this.status = status;

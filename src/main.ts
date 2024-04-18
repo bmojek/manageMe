@@ -5,6 +5,7 @@ import {
   deleteProject,
   updateProject,
   getProjectById,
+  getStoryById,
 } from "./services/projectManager.ts";
 import { renderProjects } from "./views/projectView.ts";
 import { User, mockUsers } from "./models/user.ts";
@@ -18,21 +19,34 @@ userManager.login(users[0]);
 
 let Projects = getAllProjects();
 
-function refreshProjects() {
-  Projects = getAllProjects();
+export function refreshProjects() {
+  console.log("main");
   const appDiv = document.querySelector<HTMLDivElement>("#app");
   if (appDiv) {
     appDiv.innerHTML = `
-
         <h1>MenageAPP</h1>
-        <button class="addBtn">Stwórz nowy projekt</Button>
         <div>
           <p>Zalogowany użytkownik: ${userManager.loggedInUser?.firstName}</p>
-          <p>Wybrany projekt: ${
-            userManager.currentProjectId != null
-              ? getProjectById(userManager.currentProjectId)?.name
-              : "Nie wybrano projektu"
-          } </p>
+          <a class="navBar navHome">home</a>
+          <b> / </b>
+          <a class="navBar navStory">
+           ${
+             userManager.currentProjectId != null
+               ? getProjectById(userManager.currentProjectId)?.name
+               : ""
+           } 
+           </a>
+           ${userManager.currentProjectId != null ? "<b> / </b>" : ""}
+           <a class="navBar navTask">
+           ${
+             userManager.currentStoryId != null && userManager.currentProjectId
+               ? getStoryById(
+                   userManager.currentProjectId,
+                   userManager.currentStoryId
+                 )?.name
+               : ""
+           } 
+           </a>
         </div>
         <div class="userList">
         <p>Lista użytkowników:</p>
@@ -45,6 +59,11 @@ function refreshProjects() {
             .join("")}
           </ul>
         </div>
+        ${
+          userManager.currentProjectId == null &&
+          ` <div class="btnContainer"><button class="addBtn">+</Button></div>`
+        }
+       
         <div class="projectContainer">
       ${
         userManager.currentProjectId == null
@@ -53,8 +72,8 @@ function refreshProjects() {
           <div class="Project" data-id="${project.id}">
             <h2>${project.name}</h2>
             <p>${project.desc}</p>
-            <button class="modBtn" data-id="${project.id}">Modify</button>
-            <button class="delBtn" data-id="${project.id}">Delete</button>
+            <button class="modBtn" data-id="${project.id}">Edytuj</button>
+            <button class="delBtn" data-id="${project.id}">Usuń</button>
             <button class="chooseBtn" data-id="${project.id}">Wybierz projekt</button>
           </div>
         `
@@ -62,18 +81,18 @@ function refreshProjects() {
           : renderProjects(userManager.currentProjectId, userManager)
       }
     </div>
-
     `;
   }
 }
 
 refreshProjects();
 
-document.addEventListener("click", (event) => {
+document.addEventListener("click", handleClick);
+
+function handleClick(event: MouseEvent) {
   if ((event.target as HTMLElement).classList.contains("addBtn")) {
     const newName = prompt("Podaj nazwe projektu:");
     const newDesc = prompt("Podaj opis projektu:");
-
     if (
       newName === null ||
       newDesc === null ||
@@ -126,11 +145,24 @@ document.addEventListener("click", (event) => {
     const projectId = parseInt(
       (event.target as HTMLElement).getAttribute("data-id") || ""
     );
+
     userManager.setCurrentProject(projectId);
-    refreshProjects();
+    location.reload();
   }
   if ((event.target as HTMLElement).classList.contains("exitProject")) {
     userManager.setCurrentProject(null);
+
     refreshProjects();
   }
-});
+  if ((event.target as HTMLElement).classList.contains("navStory")) {
+    userManager.setCurrentStory(null);
+
+    refreshProjects();
+  }
+  if ((event.target as HTMLElement).classList.contains("navHome")) {
+    userManager.setCurrentProject(null);
+    userManager.setCurrentStory(null);
+
+    refreshProjects();
+  }
+}

@@ -1,4 +1,5 @@
 import { Story } from "../models/story";
+import { Task } from "../models/task";
 
 export type Project = {
   id: number;
@@ -49,6 +50,17 @@ export function deleteProject(id: number) {
   }
 }
 
+export function getStoryById(
+  projectId: number,
+  storyId: number
+): Story | undefined {
+  const project = getProjectById(projectId);
+  if (project && project.stories) {
+    return project.stories.find((story) => story.id === storyId);
+  }
+  return undefined;
+}
+
 export function updateStory(
   projectId: number,
   updatedStory: Partial<Story>
@@ -95,5 +107,68 @@ export function addStory(projectId: number, story: Story): void {
     saveProjectsToLocalStorage();
   } else {
     console.error("Project not found");
+  }
+}
+
+export function getTaskById(
+  projectId: number,
+  storyId: number,
+  taskId: number
+): Task | undefined {
+  const story = getStoryById(projectId, storyId);
+  if (story && story.tasks) {
+    return story.tasks.find((task) => task.id === taskId);
+  }
+  return undefined;
+}
+
+export function addTask(projectId: number, storyId: number, task: Task): void {
+  const story = getStoryById(projectId, storyId);
+  if (story) {
+    if (!story.tasks) {
+      story.tasks = [];
+    }
+    story.tasks.push(task);
+    saveProjectsToLocalStorage();
+  } else {
+    console.error("Story not found");
+  }
+}
+
+export function updateTask(
+  projectId: number,
+  storyId: number,
+  updatedTask: Partial<Task>
+): void {
+  const story = getStoryById(projectId, storyId);
+  if (story && story.tasks) {
+    const index = story.tasks.findIndex((task) => task.id === updatedTask.id);
+    if (index !== -1) {
+      story.tasks[index] = { ...story.tasks[index], ...updatedTask };
+      saveProjectsToLocalStorage();
+    } else {
+      console.error("Task not found in story");
+    }
+  } else {
+    console.error("Story or tasks not found");
+  }
+}
+
+export function deleteTask(
+  projectId: number,
+  storyId: number,
+  taskId: number
+): void {
+  const story = getStoryById(projectId, storyId);
+  if (story && story.tasks) {
+    const index = story.tasks.findIndex((task) => task.id === taskId);
+    if (index !== -1) {
+      story.tasks.splice(index, 1);
+      saveProjectsToLocalStorage();
+    } else {
+      console.error("Task not found in story");
+    }
+  } else {
+    console.error("Story or tasks not found");
   }
 }

@@ -26,7 +26,70 @@
   margin: 10px;
   padding: 30px;
   box-sizing: border-box;
+  border-radius: 23px;
 }
 .userList {
-  float: right;
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+.navBar{
+  color: gray;
+}
+.navBar:hover{
+  color: aqua;
+  cursor: pointer;
+}
+.addBtn{
+  width: 200px;
+  border-radius: 23px;
+  font-size: 60px;
+}
+.backBtn{
+  position: absolute;
+  left: 5em;
+  width: 100px;
+  font-size: 30px;
+}
+.btnContainer{
+  text-align: center;
+}
+
+.taskCard {
+  border: 1px solid #443b3b;
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: #5a4545;
+  margin: 10px;
+}
+
+.taskCard h3 {
+  margin-top: 0;
+}
+
+.taskCard p {
+  margin: 5px 0;
+}
+
+.taskCard button {
+  margin-right: 5px;
+  padding: 5px 10px;
+  background-color: #4caf50;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.taskCard button:hover {
+  background-color: #45a049;
+}
+
+.exitStory {
+  margin-bottom: 20px;
+}
+.taskList{
+  display: flex;
+  flex-wrap: wrap;
 }
