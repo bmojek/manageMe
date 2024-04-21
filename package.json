@@ -11,5 +11,9 @@
   "devDependencies": {
     "typescript": "^5.4.5",
     "vite": "^5.1.4"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2",
+    "npm": "^10.5.2"
   }
 }

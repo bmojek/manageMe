@@ -10,6 +10,7 @@ import {
 import { renderProjects } from "./views/projectView.ts";
 import { User, mockUsers } from "./models/user.ts";
 import { UserSessionManager } from "./services/userSessionManager.ts";
+import { loginView } from "./views/loginView.ts";
 
 const users: User[] = [];
 const userManager = new UserSessionManager();
@@ -25,6 +26,7 @@ export function refreshProjects() {
   if (appDiv) {
     appDiv.innerHTML = `
         <h1>MenageAPP</h1>
+        ${loginView()}
         <div>
           <p>Zalogowany użytkownik: ${userManager.loggedInUser?.firstName}</p>
           <a class="navBar navHome">home</a>
