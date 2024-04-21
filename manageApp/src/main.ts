@@ -16,8 +16,6 @@ const users: User[] = [];
 const userManager = new UserSessionManager();
 users.push(...mockUsers());
 
-userManager.login(users[0]);
-
 let Projects = getAllProjects();
 
 export function refreshProjects() {
@@ -26,7 +24,7 @@ export function refreshProjects() {
   if (appDiv) {
     appDiv.innerHTML = `
         <h1>MenageAPP</h1>
-        ${loginView()}
+        ${loginView(userManager)}
         <div>
           <p>Zalogowany użytkownik: ${userManager.loggedInUser?.firstName}</p>
           <a class="navBar navHome">home</a>

@@ -1,11 +1,8 @@
-import { Story } from "./story";
-
 export class User {
   id: number;
   firstName: string;
   lastName: string;
   role: UserRole;
-  stories?: Story[];
 
   constructor(id: number, firstName: string, lastName: string, role: UserRole) {
     this.id = id;
