@@ -1,9 +1,8 @@
 import {
-  getProjectById,
-  getStoryById,
   addTask,
   updateTask,
   deleteTask,
+  Project,
 } from "../services/projectManager";
 import { UserSessionManager } from "../services/userSessionManager";
 import { Story } from "../models/story";
@@ -11,14 +10,16 @@ import { Priority, Status, Task } from "../models/task";
 import { refreshProjects } from "../main";
 
 export function renderStories(
-  projectId: number,
+  project: Project,
   userManager: UserSessionManager
 ): string {
-  const project = getProjectById(projectId);
   let story: Story | undefined = undefined;
-  if (userManager.currentStoryId != null) {
-    story = getStoryById(projectId, userManager.currentStoryId);
+  if (userManager.currentStoryId != null && project.stories) {
+    story = project.stories.find(
+      (story) => story.id === userManager.currentStoryId
+    );
   }
+
   if (!project || !story) {
     return "";
   }
@@ -31,27 +32,16 @@ export function renderStories(
       "editTaskDialog"
     ) as HTMLDialogElement;
     if (target.classList.contains("addTask")) {
-      const newTaskName = prompt("Enter the name of the new story:");
+      const newTaskName = prompt("Enter the name of the new task:");
       const newTaskDescription = prompt(
-        "Enter the description of the new story:"
+        "Enter the description of the new task:"
+      );
+      let maxTaskID = -1;
+      story?.tasks?.map((task) =>
+        task.id ? (task.id > maxTaskID ? (maxTaskID = task.id) : "") : ""
       );
 
-      const maxTaskID =
-        getProjectById(projectId)?.stories?.reduce((max, story) => {
-          if (story.tasks) {
-            const maxInStory = story.tasks.reduce((maxID, task) => {
-              return task.id > maxID ? task.id : maxID;
-            }, -1);
-            return maxInStory > max ? maxInStory : max;
-          }
-          return max;
-        }, -1) ?? -1;
-      if (
-        newTaskName &&
-        newTaskDescription &&
-        userManager.loggedInUser &&
-        story?.id != null
-      ) {
+      if (newTaskName && newTaskDescription && story?.id != null) {
         const newTask: Task = {
           id: maxTaskID + 1,
           name: newTaskName,
@@ -61,7 +51,8 @@ export function renderStories(
           status: Status.TODO,
           addedDate: new Date(),
         };
-        addTask(projectId, story.id, newTask);
+
+        addTask(project.id, story.id, newTask);
         document.removeEventListener("click", handleClick3);
         refreshProjects();
       }
@@ -90,13 +81,13 @@ export function renderStories(
           saveButton?.addEventListener("click", () => {
             const updatedTaskName = editTaskNameInput.value;
             const updatedTaskDescription = editTaskDescriptionInput.value;
-            if (updatedTaskName && updatedTaskDescription) {
+            if (updatedTaskName && updatedTaskDescription && story.id) {
               const updatedTask: Partial<Task> = {
                 id: taskId,
                 name: updatedTaskName,
                 description: updatedTaskDescription,
               };
-              updateTask(projectId, story.id, updatedTask);
+              updateTask(project.id, story.id, updatedTask);
               editDialog?.close();
               refreshProjects();
             }
@@ -111,7 +102,7 @@ export function renderStories(
     } else if (target.classList.contains("deleteTask")) {
       const taskId = parseInt(target.getAttribute("data-task-id") || "");
       if (!isNaN(taskId) && story?.id != null) {
-        deleteTask(projectId, story?.id, taskId);
+        deleteTask(project.id, story?.id, taskId);
         document.removeEventListener("click", handleClick3);
         refreshProjects();
       }
@@ -123,36 +114,42 @@ export function renderStories(
       ? `${story.tasks
           .map(
             (task) =>
-              `<div class="taskCard">
-          <h3>${task.name}</h3>
-          <p>Description: ${task.description}</p>
-          <p>Priority: ${task.priority}</p>
-          <p>Status: ${task.status}</p>
-          <p>Added Date: ${task.addedDate}</p>
-          <p>User Assigned: ${task.userAssigned?.firstName}</p>
-          <button class="editTask" data-task-id="${task.id}">Edit</button>
-          <button class="deleteTask" data-task-id="${task.id}">Delete</button>
-          </div> `
+              `<div class="p-4 w-[100%] m-4 bg-white dark:bg-gray-700 shadow-md rounded-lg mb-4">
+          <h3 class="text-xl font-semibold mb-2">${task.name}</h3>
+          <p class="mb-2">Description: ${task.description}</p>
+          <p class="mb-2">Priority: ${task.priority}</p>
+          <p class="mb-2">Status: ${task.status}</p>
+          <p class="mb-2">Added Date: ${task.addedDate}</p>
+          <p class="mb-2">User Assigned: ${task.userAssigned?.firstName}</p>
+          <div class="flex space-x-2">
+            <button class="editTask bg-yellow-500 text-white py-1 px-2 rounded" data-task-id="${task.id}">Edit</button>
+            <button class="deleteTask bg-red-500 text-white py-1 px-2 rounded" data-task-id="${task.id}">Delete</button>
+          </div>
+        </div>`
           )
           .join("")}`
-      : "<p>No tasks found.</p>";
+      : "<p class='text-gray-500 dark:text-gray-300'>No tasks found.</p>";
 
   return `
-      <div class="inline-block ">
-        <button class="exitStory backBtn">←</button>
-        <h1>Story: ${story.name}</h1>
-        <button class="addTask">Dodaj zadanie</button>
+    <div class="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-md">
+      <div class="inline-block mb-4">
+        <button class="exitStory  px-10 text-lg font-bold mb-2">←</button>
+        <h1 class="text-2xl font-bold mb-4">Story: ${story.name}</h1>
+        <button class="addTask bg-blue-500 text-white py-2 px-4 rounded">Dodaj zadanie</button>
       </div>
-      <dialog id="editTaskDialog">
-  <h2>Edit Task</h2>
-  <label for="editTaskName">Task Name:</label><br>
-  <input type="text" id="editTaskName" name="editTaskName"><br>
-  <label for="editTaskDescription">Task Description:</label><br>
-  <textarea id="editTaskDescription" name="editTaskDescription"></textarea><br><br>
-  <button id="saveTaskButton">Save</button>
-  <button id="cancelEditTaskButton">Cancel</button>
-</dialog>
-      <div class="taskList">
+      <dialog id="editTaskDialog" class="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-md">
+        <h2 class="text-xl font-bold mb-4">Edit Task</h2>
+        <label for="editTaskName" class="block mb-2">Task Name:</label>
+        <input type="text" id="editTaskName" name="editTaskName" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800">
+        <label for="editTaskDescription" class="block mb-2">Task Description:</label>
+        <textarea id="editTaskDescription" name="editTaskDescription" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800"></textarea>
+        <div class="flex justify-end space-x-2">
+          <button id="saveTaskButton" class="bg-green-500 text-white py-2 px-4 rounded">Save</button>
+          <button id="cancelEditTaskButton" class="bg-gray-500 text-white py-2 px-4 rounded" onclick="document.getElementById('editTaskDialog').close()">Cancel</button>
+        </div>
+      </dialog>
+      <div class="taskList flex flex-wrap">
         ${tasksList}
-      </div>`;
+      </div>
+    </div>`;
 }

@@ -1,19 +1,18 @@
-import { getProjectById } from "../services/projectManager";
+import { Project } from "../services/projectManager";
 import { UserSessionManager } from "../services/userSessionManager";
-import { Story } from "../models/story";
-import { Priority, Status } from "../models/story";
+import { Story, Priority, Status } from "../models/story";
 import { addStory, deleteStory, updateStory } from "../services/projectManager";
 import { refreshProjects } from "../main";
 import { renderStories } from "./storyView";
 
 let userId = 0;
+
 export function renderProjects(
-  projectId: number,
+  project: Project | undefined,
   userManager: UserSessionManager
 ): string {
   if (userManager.loggedInUser) userId = userManager.loggedInUser?.id;
 
-  const project = getProjectById(projectId);
   if (!project) {
     return "";
   }
@@ -23,19 +22,16 @@ export function renderProjects(
   function handleClick2(event: MouseEvent) {
     const target = event.target as HTMLElement;
     if (target.classList.contains("addStoryBtn")) {
-      const projectId = parseInt(
-        target.closest(".projectInfo")?.getAttribute("data-id") || ""
-      );
-      if (!isNaN(projectId)) {
+      if (project?.id) {
         const newStoryName = prompt("Enter the name of the new story:");
         const newStoryDescription = prompt(
           "Enter the description of the new story:"
         );
+        let maxID = -1;
 
-        const maxID =
-          getProjectById(projectId)?.stories?.reduce((max, story) => {
-            return story.id > max ? story.id : max;
-          }, -1) ?? -1;
+        project.stories?.map((story) =>
+          story.id ? (story.id > maxID ? (maxID = story.id) : "") : ""
+        );
 
         if (newStoryName && newStoryDescription) {
           const newStory: Story = {
@@ -43,14 +39,14 @@ export function renderProjects(
             name: newStoryName,
             description: newStoryDescription,
             priority: Priority.Low,
-            project: projectId,
+            project: project.id,
             creationDate: new Date(),
             status: Status.Doing,
             owner: userId,
           };
 
-          if (newStory) {
-            addStory(projectId, newStory);
+          if (newStory && project.id) {
+            addStory(project.id, newStory);
           }
           document.removeEventListener("click", handleClick2);
           refreshProjects();
@@ -66,14 +62,14 @@ export function renderProjects(
           "Enter the new description for the story:"
         );
 
-        if (updatedStoryName && updatedStoryDescription) {
+        if (updatedStoryName && updatedStoryDescription && project?.id) {
           const updatedStory: Partial<Story> = {
             name: updatedStoryName,
             description: updatedStoryDescription,
             id: storyId,
           };
 
-          updateStory(projectId, updatedStory);
+          updateStory(project.id, updatedStory);
         }
         document.removeEventListener("click", handleClick2);
         refreshProjects();
@@ -86,8 +82,8 @@ export function renderProjects(
         const confirmDelete = confirm(
           "Are you sure you want to delete this story?"
         );
-        if (confirmDelete) {
-          deleteStory(projectId, storyId);
+        if (confirmDelete && project?.id) {
+          deleteStory(project.id, storyId);
         }
         document.removeEventListener("click", handleClick2);
         refreshProjects();
@@ -110,17 +106,16 @@ export function renderProjects(
 
   const renderStoryItem = (story: Story): string => `
     <tr class="storyItem" data-id="${story.id}">
-      <td>${story.name}</td>
-      <td>${story.description}</td>
-      <td>${story.owner}</td>
-      <td>${story.priority}</td>
-      <td>${story.status}</td>
-      <td>${story.creationDate}</td>
-      <td>
-        <button class="editStoryBtn">Edytuj</button>
-        <button class="deleteStoryBtn">Usuń</button>
-        <button class="selectBtn">Wybierz</button>
-
+      <td class="border px-4 py-2">${story.name}</td>
+      <td class="border px-4 py-2">${story.description}</td>
+      <td class="border px-4 py-2">${story.owner}</td>
+      <td class="border px-4 py-2">${story.priority}</td>
+      <td class="border px-4 py-2">${story.status}</td>
+      <td class="border px-4 py-2">${story.creationDate}</td>
+      <td class="border px-4 py-2">
+        <button class="editStoryBtn bg-yellow-500 text-white py-1 px-2 rounded mr-2">Edytuj</button>
+        <button class="deleteStoryBtn bg-red-500 text-white py-1 px-2 rounded mr-2">Usuń</button>
+        <button class="selectBtn bg-green-500 text-white py-1 px-2 rounded">Wybierz</button>
       </td>
     </tr>
   `;
@@ -130,23 +125,23 @@ export function renderProjects(
 
   return `${
     userManager.currentStoryId == null
-      ? `<div class="projectDetails">
-  <div class="projectInfo" data-id="${projectId}">   
-    <button class="exitProject backBtn">←</button>    
-    <h2>Nazwa: ${project.name}</h2>
-    <p>Opis: ${project.desc}</p>
-    <button class="addStoryBtn">Dodaj story</button>
+      ? `<div class="projectDetails p-4 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-md">
+  <div class="projectInfo" data-id="${project.id}">   
+    <button class="exitProject px-10 text-lg font-bold mb-2">←</button>    
+    <h2 class="text-2xl font-bold mb-4">Nazwa: ${project.name}</h2>
+    <p class="mb-4">Opis: ${project.desc}</p>
+    <button class="addStoryBtn bg-blue-500 text-white py-2 px-4 rounded mb-4">Dodaj story</button>
   </div>
-  <table class="storyTable">
-    <thead>
+  <table class="storyTable min-w-full bg-white dark:bg-gray-700">
+    <thead class="bg-gray-200 dark:bg-gray-600">
       <tr>
-        <th>Nazwa</th>
-        <th>Opis</th>
-        <th>Właściciel</th>
-        <th>Priorytet</th>
-        <th>Status</th>
-        <th>Data utworzenia</th>
-        <th>Akcje</th>
+        <th class="border px-4 py-2">Nazwa</th>
+        <th class="border px-4 py-2">Opis</th>
+        <th class="border px-4 py-2">Właściciel</th>
+        <th class="border px-4 py-2">Priorytet</th>
+        <th class="border px-4 py-2">Status</th>
+        <th class="border px-4 py-2">Data utworzenia</th>
+        <th class="border px-4 py-2">Akcje</th>
       </tr>
     </thead>
     <tbody>
@@ -154,7 +149,7 @@ export function renderProjects(
     </tbody>
   </table>
 </div>`
-      : renderStories(projectId, userManager)
+      : renderStories(project, userManager)
   }
   `;
 }

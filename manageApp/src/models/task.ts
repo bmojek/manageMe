@@ -13,7 +13,7 @@ export enum Status {
 }
 
 export class Task {
-  id: number;
+  id?: number;
   name: string;
   description: string;
   priority: Priority;

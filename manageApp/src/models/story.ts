@@ -13,11 +13,11 @@ export enum Status {
 }
 
 export class Story {
-  id: number;
+  id?: number;
   name: string;
   description: string;
   priority: Priority;
-  project: number;
+  project: string;
   creationDate: Date;
   status: Status;
   owner: number;
@@ -28,7 +28,7 @@ export class Story {
     name: string,
     description: string,
     priority: Priority,
-    project: number,
+    project: string,
     creationDate: Date,
     status: Status,
     owner: number

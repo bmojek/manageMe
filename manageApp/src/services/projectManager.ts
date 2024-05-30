@@ -1,174 +1,291 @@
 import { Story } from "../models/story";
 import { Task } from "../models/task";
-
+import {
+  collection,
+  addDoc,
+  doc,
+  getDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  getFirestore,
+} from "firebase/firestore";
+import { app } from "../firebase";
 export type Project = {
-  id: number;
+  id: string;
   name: string;
   desc: string;
   stories?: Story[];
 };
 
-export let Projects: Project[] = [];
+const db = getFirestore(app);
 
-const storedData = localStorage.getItem("projectData");
-if (storedData) {
-  Projects = JSON.parse(storedData);
-} else {
-  localStorage.setItem("projectData", JSON.stringify(Projects));
-}
-
-export function saveProjectsToLocalStorage() {
-  localStorage.setItem("projectData", JSON.stringify(Projects));
-}
-
-export function createProject(project: Project) {
-  Projects.push(project);
-  saveProjectsToLocalStorage();
-}
-
-export function getProjectById(id: number): Project | undefined {
-  return Projects.find((project) => project.id === id);
-}
-
-export function getAllProjects(): Project[] {
-  return Projects;
-}
-
-export function updateProject(id: number, newData: Partial<Project>) {
-  const index = Projects.findIndex((project) => project.id === id);
-  if (index !== -1) {
-    Projects[index] = { ...Projects[index], ...newData };
-    saveProjectsToLocalStorage();
+export async function getAllProjects(): Promise<Project[]> {
+  try {
+    const projectsCollectionRef = collection(db, "projects");
+    const querySnapshot = await getDocs(projectsCollectionRef);
+    const projects: Project[] = querySnapshot.docs.map((doc) => {
+      const projectData = doc.data() as Project;
+      return {
+        id: doc.id,
+        name: projectData.name,
+        desc: projectData.desc,
+        stories: projectData.stories,
+      };
+    });
+    console.log("Projects loaded from Firebase successfully.");
+    return projects;
+  } catch (error) {
+    console.error("Error loading projects from Firebase:", error);
+    return [];
   }
 }
 
-export function deleteProject(id: number) {
-  const index = Projects.findIndex((project) => project.id === id);
-  if (index !== -1) {
-    Projects.splice(index, 1);
-    saveProjectsToLocalStorage();
+export async function createProject(project: Project) {
+  try {
+    const projectsCollectionRef = collection(db, "projects");
+    await addDoc(projectsCollectionRef, {
+      name: project.name,
+      desc: project.desc,
+    });
+    console.log("Project created and saved to Firebase successfully.");
+  } catch (error) {
+    console.error("Error creating project and saving to Firebase:", error);
   }
 }
 
-export function getStoryById(
-  projectId: number,
+export async function getProjectById(id: string): Promise<Project | undefined> {
+  try {
+    const projectDocRef = doc(db, "projects", id);
+    const projectDoc = await getDoc(projectDocRef);
+    if (projectDoc.exists()) {
+      const projectData = projectDoc.data() as Project;
+      return {
+        id: projectDoc.id,
+        name: projectData.name,
+        desc: projectData.desc,
+        stories: projectData.stories,
+      };
+    } else {
+      console.error("No such project!");
+      return undefined;
+    }
+  } catch (error) {
+    console.error("Error getting project from Firebase:", error);
+    return undefined;
+  }
+}
+
+export async function updateProject(id: string, newData: Partial<Project>) {
+  try {
+    const projectDocRef = doc(db, "projects", id);
+    await updateDoc(projectDocRef, newData);
+    console.log("Project updated successfully.");
+  } catch (error) {
+    console.error("Error updating project:", error);
+  }
+}
+
+export async function deleteProject(id: string) {
+  try {
+    const projectDocRef = doc(db, "projects", id);
+    await deleteDoc(projectDocRef);
+    console.log("Project deleted successfully.");
+  } catch (error) {
+    console.error("Error deleting project:", error);
+  }
+}
+
+export async function getStoryById(
+  projectId: string,
   storyId: number
-): Story | undefined {
-  const project = getProjectById(projectId);
-  if (project && project.stories) {
-    return project.stories.find((story) => story.id === storyId);
+): Promise<Story | undefined> {
+  try {
+    const project = await getProjectById(projectId);
+    if (project && project.stories) {
+      return project.stories.find((story) => story.id === storyId);
+    }
+    return undefined;
+  } catch (error) {
+    console.error("Error getting story from Firebase:", error);
+    return undefined;
   }
-  return undefined;
 }
 
-export function updateStory(
-  projectId: number,
+export async function addStory(projectId: string, story: Story): Promise<void> {
+  try {
+    const projectDocRef = doc(db, "projects", projectId);
+    const projectDoc = await getDoc(projectDocRef);
+    if (projectDoc.exists()) {
+      const projectData = projectDoc.data() as Project;
+      if (!projectData.stories) {
+        projectData.stories = [];
+      }
+      projectData.stories.push(story);
+      await updateDoc(projectDocRef, { stories: projectData.stories });
+      console.log("Story added successfully.");
+    } else {
+      console.error("No such project!");
+    }
+  } catch (error) {
+    console.error("Error adding story:", error);
+  }
+}
+
+export async function updateStory(
+  projectId: string,
   updatedStory: Partial<Story>
-): void {
-  const project = getProjectById(projectId);
-  if (project && project.stories) {
-    const index = project.stories.findIndex(
-      (story) => story.id === updatedStory.id
-    );
-    if (index !== -1) {
-      project.stories[index] = { ...project.stories[index], ...updatedStory };
-      saveProjectsToLocalStorage();
+): Promise<void> {
+  try {
+    const projectDocRef = doc(db, "projects", projectId);
+    const projectDoc = await getDoc(projectDocRef);
+    if (projectDoc.exists()) {
+      const projectData = projectDoc.data() as Project;
+      if (projectData.stories) {
+        const index = projectData.stories.findIndex(
+          (story) => story.id === updatedStory.id
+        );
+        if (index !== -1) {
+          projectData.stories[index] = {
+            ...projectData.stories[index],
+            ...updatedStory,
+          };
+          await updateDoc(projectDocRef, { stories: projectData.stories });
+          console.log("Story updated successfully.");
+        } else {
+          console.error("Story not found in project");
+        }
+      } else {
+        console.error("No stories found in project");
+      }
     } else {
-      console.error("Story not found in project");
+      console.error("No such project!");
     }
-  } else {
-    console.error("Project or stories not found");
-  }
-}
-export function deleteStory(projectId: number, storyId: number): void {
-  const project = getProjectById(projectId);
-  if (project && project.stories) {
-    const index = project.stories.findIndex((story) => story.id === storyId);
-    if (index !== -1) {
-      project.stories.splice(index, 1);
-      saveProjectsToLocalStorage();
-    } else {
-      console.error("Story not found in project");
-    }
-  } else {
-    console.error("Project not found or no stories in project");
+  } catch (error) {
+    console.error("Error updating story:", error);
   }
 }
 
-export function addStory(projectId: number, story: Story): void {
-  const projectIndex = Projects.findIndex(
-    (project) => project.id === projectId
-  );
-  if (projectIndex !== -1) {
-    if (!Projects[projectIndex].stories) {
-      Projects[projectIndex].stories = [];
+export async function deleteStory(
+  projectId: string,
+  storyId: number
+): Promise<void> {
+  try {
+    const projectDocRef = doc(db, "projects", projectId);
+    const projectDoc = await getDoc(projectDocRef);
+    if (projectDoc.exists()) {
+      const projectData = projectDoc.data() as Project;
+      if (projectData.stories) {
+        const index = projectData.stories.findIndex(
+          (story) => story.id === storyId
+        );
+        if (index !== -1) {
+          projectData.stories.splice(index, 1);
+          await updateDoc(projectDocRef, { stories: projectData.stories });
+          console.log("Story deleted successfully.");
+        } else {
+          console.error("Story not found in project");
+        }
+      } else {
+        console.error("No stories found in project");
+      }
+    } else {
+      console.error("No such project!");
     }
-    Projects[projectIndex].stories?.push(story);
-    saveProjectsToLocalStorage();
-  } else {
-    console.error("Project not found");
+  } catch (error) {
+    console.error("Error deleting story:", error);
   }
 }
 
-export function getTaskById(
-  projectId: number,
+export async function addTask(
+  projectId: string,
   storyId: number,
-  taskId: number
-): Task | undefined {
-  const story = getStoryById(projectId, storyId);
-  if (story && story.tasks) {
-    return story.tasks.find((task) => task.id === taskId);
-  }
-  return undefined;
-}
-
-export function addTask(projectId: number, storyId: number, task: Task): void {
-  const story = getStoryById(projectId, storyId);
-  if (story) {
-    if (!story.tasks) {
-      story.tasks = [];
+  task: Task
+): Promise<void> {
+  try {
+    const projectDocRef = doc(db, "projects", projectId);
+    const projectDoc = await getDoc(projectDocRef);
+    if (projectDoc.exists()) {
+      const projectData = projectDoc.data() as Project;
+      const story = projectData.stories?.find((story) => story.id === storyId);
+      if (story) {
+        if (!story.tasks) {
+          story.tasks = [];
+        }
+        story.tasks.push(task);
+        await updateDoc(projectDocRef, { stories: projectData.stories });
+        console.log("Task added successfully.");
+      } else {
+        console.error("No such story in project");
+      }
+    } else {
+      console.error("No such project!");
     }
-    story.tasks.push(task);
-    saveProjectsToLocalStorage();
-  } else {
-    console.error("Story not found");
+  } catch (error) {
+    console.error("Error adding task:", error);
   }
 }
 
-export function updateTask(
-  projectId: number,
+export async function updateTask(
+  projectId: string,
   storyId: number,
   updatedTask: Partial<Task>
-): void {
-  const story = getStoryById(projectId, storyId);
-  if (story && story.tasks) {
-    const index = story.tasks.findIndex((task) => task.id === updatedTask.id);
-    if (index !== -1) {
-      story.tasks[index] = { ...story.tasks[index], ...updatedTask };
-      saveProjectsToLocalStorage();
+): Promise<void> {
+  try {
+    const projectDocRef = doc(db, "projects", projectId);
+    const projectDoc = await getDoc(projectDocRef);
+    if (projectDoc.exists()) {
+      const projectData = projectDoc.data() as Project;
+      const story = projectData.stories?.find((story) => story.id === storyId);
+      if (story && story.tasks) {
+        const index = story.tasks.findIndex(
+          (task) => task.id === updatedTask.id
+        );
+        if (index !== -1) {
+          story.tasks[index] = { ...story.tasks[index], ...updatedTask };
+          await updateDoc(projectDocRef, { stories: projectData.stories });
+          console.log("Task updated successfully.");
+        } else {
+          console.error("Task not found in story");
+        }
+      } else {
+        console.error("No tasks found in story");
+      }
     } else {
-      console.error("Task not found in story");
+      console.error("No such project!");
     }
-  } else {
-    console.error("Story or tasks not found");
+  } catch (error) {
+    console.error("Error updating task:", error);
   }
 }
 
-export function deleteTask(
-  projectId: number,
+export async function deleteTask(
+  projectId: string,
   storyId: number,
   taskId: number
-): void {
-  const story = getStoryById(projectId, storyId);
-  if (story && story.tasks) {
-    const index = story.tasks.findIndex((task) => task.id === taskId);
-    if (index !== -1) {
-      story.tasks.splice(index, 1);
-      saveProjectsToLocalStorage();
+): Promise<void> {
+  try {
+    const projectDocRef = doc(db, "projects", projectId);
+    const projectDoc = await getDoc(projectDocRef);
+    if (projectDoc.exists()) {
+      const projectData = projectDoc.data() as Project;
+      const story = projectData.stories?.find((story) => story.id === storyId);
+      if (story && story.tasks) {
+        const index = story.tasks.findIndex((task) => task.id === taskId);
+        if (index !== -1) {
+          story.tasks.splice(index, 1);
+          await updateDoc(projectDocRef, { stories: projectData.stories });
+          console.log("Task deleted successfully.");
+        } else {
+          console.error("Task not found in story");
+        }
+      } else {
+        console.error("No tasks found in story");
+      }
     } else {
-      console.error("Task not found in story");
+      console.error("No such project!");
     }
-  } else {
-    console.error("Story or tasks not found");
+  } catch (error) {
+    console.error("Error deleting task:", error);
   }
 }

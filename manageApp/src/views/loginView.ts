@@ -57,9 +57,9 @@ export function loginView(userManager: UserSessionManager): string {
     btn?.addEventListener("click", handleLogin);
   });
   return `
-    <div class="loginContainer">
-      <input type="text" id="loginInput" placeholder="Login">
-      <input type="password" id="passwordInput" placeholder="Hasło">
+    <div class="loginContainer text-right">
+      <input class="pl-3" type="text" id="loginInput" placeholder="Login">
+      <input class="pl-3" type="password" id="passwordInput" placeholder="Hasło">
       <button class="bg-green-300 text-black font-bold" id="loginBtn">Zaloguj</button>
     </div>
   `;

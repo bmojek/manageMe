@@ -4,7 +4,7 @@ export class UserSessionManager {
   private static readonly STORAGE_KEY = "userSessionManagerData";
 
   loggedInUser: User | null;
-  currentProjectId: number | null;
+  currentProjectId: string | null;
   currentStoryId: number | null;
 
   constructor() {
@@ -43,7 +43,7 @@ export class UserSessionManager {
     this.saveToLocalStorage();
   }
 
-  setCurrentProject(projectId: number | null) {
+  setCurrentProject(projectId: string | null) {
     this.currentProjectId = projectId;
     this.saveToLocalStorage();
   }

@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "autoprefixer": "^10.4.19",
+    "firebase": "^10.12.2",
     "node-fetch": "^3.3.2",
     "npm": "^10.5.2",
     "postcss": "^8.4.38"
