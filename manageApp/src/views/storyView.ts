@@ -138,7 +138,7 @@ export function renderStories(
       : "<p>No tasks found.</p>";
 
   return `
-      <div>
+      <div class="inline-block ">
         <button class="exitStory backBtn">←</button>
         <h1>Story: ${story.name}</h1>
         <button class="addTask">Dodaj zadanie</button>

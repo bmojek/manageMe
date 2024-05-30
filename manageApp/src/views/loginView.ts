@@ -60,7 +60,7 @@ export function loginView(userManager: UserSessionManager): string {
     <div class="loginContainer">
       <input type="text" id="loginInput" placeholder="Login">
       <input type="password" id="passwordInput" placeholder="Hasło">
-      <button id="loginBtn">Zaloguj</button>
+      <button class="bg-green-300 text-black font-bold" id="loginBtn">Zaloguj</button>
     </div>
   `;
 }
