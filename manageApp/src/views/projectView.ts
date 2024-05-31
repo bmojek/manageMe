@@ -1,11 +1,11 @@
-import { Project } from "../services/projectManager";
+import { Project } from "../models/project";
 import { UserSessionManager } from "../services/userSessionManager";
 import { Story, Priority, Status } from "../models/story";
 import { addStory, deleteStory, updateStory } from "../services/projectManager";
 import { refreshProjects } from "../main";
 import { renderStories } from "./storyView";
 
-let userId = 0;
+let userId = "0";
 
 export function renderProjects(
   project: Project | undefined,
@@ -20,6 +20,9 @@ export function renderProjects(
   document.addEventListener("click", handleClick2);
 
   function handleClick2(event: MouseEvent) {
+    const editDialog = document.getElementById(
+      "editStoryDialog"
+    ) as HTMLDialogElement;
     const target = event.target as HTMLElement;
     if (target.classList.contains("addStoryBtn")) {
       if (project?.id) {
@@ -29,20 +32,22 @@ export function renderProjects(
         );
         let maxID = -1;
 
-        project.stories?.map((story) =>
-          story.id ? (story.id > maxID ? (maxID = story.id) : "") : ""
-        );
+        project.stories?.forEach((story) => {
+          if (story.id != undefined && story.id > maxID) {
+            maxID = story.id;
+          }
+        });
 
-        if (newStoryName && newStoryDescription) {
+        if (newStoryName && newStoryDescription && userManager.loggedInUser) {
           const newStory: Story = {
             id: maxID + 1,
             name: newStoryName,
             description: newStoryDescription,
-            priority: Priority.Low,
+            priority: Priority.LOW,
             project: project.id,
-            creationDate: new Date(),
-            status: Status.Doing,
-            owner: userId,
+            creationDate: Date.now(),
+            status: Status.TODO,
+            owner: userManager.loggedInUser,
           };
 
           if (newStory && project.id) {
@@ -56,32 +61,73 @@ export function renderProjects(
       const storyId = parseInt(
         target.closest(".storyItem")?.getAttribute("data-id") || ""
       );
-      if (!isNaN(storyId)) {
-        const updatedStoryName = prompt("Enter the new name for the story:");
-        const updatedStoryDescription = prompt(
-          "Enter the new description for the story:"
+      if (storyId != undefined && project?.stories != undefined) {
+        const storyToEdit = project?.stories.find(
+          (story) => story.id === storyId
         );
 
-        if (updatedStoryName && updatedStoryDescription && project?.id) {
-          const updatedStory: Partial<Story> = {
-            name: updatedStoryName,
-            description: updatedStoryDescription,
-            id: storyId,
-          };
+        if (!isNaN(storyId) && storyToEdit != null) {
+          const editStoryNameInput = document.getElementById(
+            "editStoryName"
+          ) as HTMLInputElement;
+          const editStoryDescriptionInput = document.getElementById(
+            "editStoryDescription"
+          ) as HTMLTextAreaElement;
+          const editStoryPrioritySelect = document.getElementById(
+            "editStoryPriority"
+          ) as HTMLSelectElement;
+          const editStoryStatusSelect = document.getElementById(
+            "editStoryStatus"
+          ) as HTMLSelectElement;
 
-          updateStory(project.id, updatedStory);
+          editStoryNameInput.value = storyToEdit.name;
+          editStoryDescriptionInput.value = storyToEdit.description;
+          editStoryPrioritySelect.value = storyToEdit.priority;
+          editStoryStatusSelect.value = storyToEdit.status;
+
+          editDialog?.showModal();
+
+          const saveButton = document.getElementById(
+            "saveStoryButton"
+          ) as HTMLButtonElement;
+          const saveListener = () => {
+            const updatedStoryName = editStoryNameInput.value;
+            const updatedStoryDescription = editStoryDescriptionInput.value;
+            const updatedStoryPriority =
+              editStoryPrioritySelect.value as Priority;
+            const updatedStoryStatus = editStoryStatusSelect.value as Status;
+
+            if (
+              updatedStoryName &&
+              updatedStoryDescription &&
+              storyId != undefined &&
+              userManager.loggedInUser
+            ) {
+              const updatedStory: Partial<Story> = {
+                id: storyId,
+                name: updatedStoryName,
+                description: updatedStoryDescription,
+                priority: updatedStoryPriority,
+                status: updatedStoryStatus,
+                owner: userManager.loggedInUser,
+              };
+              updateStory(project.id, updatedStory);
+              editDialog?.close();
+              refreshProjects();
+            }
+          };
+          saveButton?.addEventListener("click", saveListener);
+          editDialog?.addEventListener("close", () => {
+            saveButton?.removeEventListener("click", saveListener);
+          });
         }
-        document.removeEventListener("click", handleClick2);
-        refreshProjects();
       }
     } else if (target.classList.contains("deleteStoryBtn")) {
       const storyId = parseInt(
         target.closest(".storyItem")?.getAttribute("data-id") || ""
       );
       if (!isNaN(storyId)) {
-        const confirmDelete = confirm(
-          "Are you sure you want to delete this story?"
-        );
+        const confirmDelete = confirm("Napewno chcesz usunąć to story?");
         if (confirmDelete && project?.id) {
           deleteStory(project.id, storyId);
         }
@@ -108,10 +154,12 @@ export function renderProjects(
     <tr class="storyItem" data-id="${story.id}">
       <td class="border px-4 py-2">${story.name}</td>
       <td class="border px-4 py-2">${story.description}</td>
-      <td class="border px-4 py-2">${story.owner}</td>
+      <td class="border px-4 py-2">${story.owner.lastName}</td>
       <td class="border px-4 py-2">${story.priority}</td>
       <td class="border px-4 py-2">${story.status}</td>
-      <td class="border px-4 py-2">${story.creationDate}</td>
+      <td class="border px-4 py-2">${new Date(
+        story.creationDate
+      ).toLocaleString()}</td>
       <td class="border px-4 py-2">
         <button class="editStoryBtn bg-yellow-500 text-white py-1 px-2 rounded mr-2">Edytuj</button>
         <button class="deleteStoryBtn bg-red-500 text-white py-1 px-2 rounded mr-2">Usuń</button>
@@ -132,22 +180,47 @@ export function renderProjects(
     <p class="mb-4">Opis: ${project.desc}</p>
     <button class="addStoryBtn bg-blue-500 text-white py-2 px-4 rounded mb-4">Dodaj story</button>
   </div>
-  <table class="storyTable min-w-full bg-white dark:bg-gray-700">
+  <dialog id="editStoryDialog" class="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-md w-1/2">
+        <h2 class="text-xl font-bold mb-4">Edit Story</h2>
+        <label for="editStoryName" class="block mb-2">Story Name:</label>
+        <input type="text" id="editStoryName" name="editStoryName" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800">
+        <label for="editStoryDescription" class="block mb-2">Story Description:</label>
+        <textarea id="editStoryDescription" name="editStoryDescription" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800"></textarea>
+        <label for="editStoryPriority" class="block mb-2">Story Priority:</label>
+        <select id="editStoryPriority" name="editStoryPriority" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800">
+          <option value="${Priority.LOW}">Low</option>
+          <option value="${Priority.MEDIUM}">Medium</option>
+          <option value="${Priority.HIGH}">High</option>
+        </select>
+        <label for="editStoryStatus" class="block mb-2">Story Status:</label>
+        <select id="editStoryStatus" name="editStoryStatus" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800">
+          <option value="${Status.TODO}">To Do</option>
+          <option value="${Status.DOING}">In Progress</option>
+          <option value="${Status.DONE}">Done</option>
+        </select>
+        
+        <div class="flex justify-end space-x-2">
+          <button id="saveStoryButton" class="bg-green-500 text-white py-2 px-4 rounded">Save</button>
+          <button id="cancelEditStoryButton" class="bg-gray-500 text-white py-2 px-4 rounded" onclick="document.getElementById('editStoryDialog').close()">Cancel</button>
+        </div>
+      </dialog>
+  <table class="storyTable  w-full bg-white dark:bg-gray-700">
     <thead class="bg-gray-200 dark:bg-gray-600">
       <tr>
-        <th class="border px-4 py-2">Nazwa</th>
-        <th class="border px-4 py-2">Opis</th>
-        <th class="border px-4 py-2">Właściciel</th>
-        <th class="border px-4 py-2">Priorytet</th>
-        <th class="border px-4 py-2">Status</th>
-        <th class="border px-4 py-2">Data utworzenia</th>
-        <th class="border px-4 py-2">Akcje</th>
+        <th class="border  py-2">Nazwa</th>
+        <th class="border  py-2">Opis</th>
+        <th class="border  py-2">Właściciel</th>
+        <th class="border  py-2">Priorytet</th>
+        <th class="border  py-2">Status</th>
+        <th class="border  py-2">Data utworzenia</th>
+        <th class="border  py-2">Akcje</th>
       </tr>
     </thead>
     <tbody>
       ${storyItems}
     </tbody>
   </table>
+  
 </div>`
       : renderStories(project, userManager)
   }

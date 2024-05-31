@@ -1,15 +1,16 @@
 import { Task } from "./task";
+import { User } from "./user";
 
 export enum Priority {
-  Low = "Low",
-  Medium = "Medium",
-  High = "High",
+  LOW = "Low",
+  MEDIUM = "Medium",
+  HIGH = "High",
 }
 
 export enum Status {
-  Todo = "Todo",
-  Doing = "Doing",
-  Done = "Done",
+  TODO = "Todo",
+  DOING = "Doing",
+  DONE = "Done",
 }
 
 export class Story {
@@ -18,9 +19,9 @@ export class Story {
   description: string;
   priority: Priority;
   project: string;
-  creationDate: Date;
+  creationDate: number;
   status: Status;
-  owner: number;
+  owner: User;
   tasks?: Task[];
 
   constructor(
@@ -29,9 +30,9 @@ export class Story {
     description: string,
     priority: Priority,
     project: string,
-    creationDate: Date,
+    creationDate: number,
     status: Status,
-    owner: number
+    owner: User
   ) {
     this.id = id;
     this.name = name;

@@ -11,12 +11,7 @@ import {
   getFirestore,
 } from "firebase/firestore";
 import { app } from "../firebase";
-export type Project = {
-  id: string;
-  name: string;
-  desc: string;
-  stories?: Story[];
-};
+import { Project } from "../models/project";
 
 const db = getFirestore(app);
 
@@ -33,7 +28,7 @@ export async function getAllProjects(): Promise<Project[]> {
         stories: projectData.stories,
       };
     });
-    console.log("Projects loaded from Firebase successfully.");
+
     return projects;
   } catch (error) {
     console.error("Error loading projects from Firebase:", error);
@@ -48,7 +43,6 @@ export async function createProject(project: Project) {
       name: project.name,
       desc: project.desc,
     });
-    console.log("Project created and saved to Firebase successfully.");
   } catch (error) {
     console.error("Error creating project and saving to Firebase:", error);
   }
@@ -80,7 +74,6 @@ export async function updateProject(id: string, newData: Partial<Project>) {
   try {
     const projectDocRef = doc(db, "projects", id);
     await updateDoc(projectDocRef, newData);
-    console.log("Project updated successfully.");
   } catch (error) {
     console.error("Error updating project:", error);
   }
@@ -90,7 +83,6 @@ export async function deleteProject(id: string) {
   try {
     const projectDocRef = doc(db, "projects", id);
     await deleteDoc(projectDocRef);
-    console.log("Project deleted successfully.");
   } catch (error) {
     console.error("Error deleting project:", error);
   }
@@ -123,7 +115,6 @@ export async function addStory(projectId: string, story: Story): Promise<void> {
       }
       projectData.stories.push(story);
       await updateDoc(projectDocRef, { stories: projectData.stories });
-      console.log("Story added successfully.");
     } else {
       console.error("No such project!");
     }
@@ -151,7 +142,6 @@ export async function updateStory(
             ...updatedStory,
           };
           await updateDoc(projectDocRef, { stories: projectData.stories });
-          console.log("Story updated successfully.");
         } else {
           console.error("Story not found in project");
         }
@@ -182,7 +172,6 @@ export async function deleteStory(
         if (index !== -1) {
           projectData.stories.splice(index, 1);
           await updateDoc(projectDocRef, { stories: projectData.stories });
-          console.log("Story deleted successfully.");
         } else {
           console.error("Story not found in project");
         }
@@ -214,7 +203,6 @@ export async function addTask(
         }
         story.tasks.push(task);
         await updateDoc(projectDocRef, { stories: projectData.stories });
-        console.log("Task added successfully.");
       } else {
         console.error("No such story in project");
       }
@@ -244,7 +232,6 @@ export async function updateTask(
         if (index !== -1) {
           story.tasks[index] = { ...story.tasks[index], ...updatedTask };
           await updateDoc(projectDocRef, { stories: projectData.stories });
-          console.log("Task updated successfully.");
         } else {
           console.error("Task not found in story");
         }
@@ -275,7 +262,6 @@ export async function deleteTask(
         if (index !== -1) {
           story.tasks.splice(index, 1);
           await updateDoc(projectDocRef, { stories: projectData.stories });
-          console.log("Task deleted successfully.");
         } else {
           console.error("Task not found in story");
         }

@@ -15,7 +15,6 @@ import { loginView } from "./views/loginView.ts";
 const users: User[] = [];
 const userManager = new UserSessionManager();
 users.push(...mockUsers());
-userManager.login(users[1]);
 
 export async function refreshProjects() {
   const Projects = await getAllProjects();
@@ -25,12 +24,10 @@ export async function refreshProjects() {
         <h1 class="text-2xl font-bold mb-4">MenageAPP</h1>
         ${loginView(userManager)}
         <div>
-          <p class="mb-2">Zalogowany użytkownik: ${
-            userManager.loggedInUser?.firstName
-          }</p>
-          <a class="navBar navHome hover:text-cyan-500 ml-4">home</a>
+
+          <a class="navBar navHome hover:text-cyan-500 hover:cursor-pointer ml-4">home</a>
           <b> / </b>
-          <a class="navBar navStory hover:text-cyan-500">
+          <a class="navBar navStory hover:text-cyan-500 hover:cursor-pointer">
            ${
              userManager.currentProjectId != null
                ? (await getProjectById(userManager.currentProjectId))?.name
@@ -38,7 +35,7 @@ export async function refreshProjects() {
            } 
            </a>
            ${userManager.currentProjectId != null ? "<b> / </b>" : ""}
-           <a class="navBar navTask hover:text-cyan-500">
+           <a class="navBar navTask hover:text-cyan-500 hover:cursor-pointer">
            ${
              userManager.currentStoryId != null && userManager.currentProjectId
                ? (
@@ -63,17 +60,17 @@ export async function refreshProjects() {
           ` <div class="text-center text-3xl my-4"><button class="addBtn bg-blue-500 text-white py-2 px-4 rounded">+</Button></div>`
         }
        
-        <div class="projectContainer">
+        <div class="projectContainer flex-col flex ">
       ${
         userManager.currentProjectId == null
           ? Projects.map(
               (project) => `
-          <div class="Project border p-4 mb-4" data-id="${project.id}">
-            <h2 class="text-xl font-semibold">${project.name}</h2>
-            <p class="mb-2">${project.desc}</p>
+          <div class=" border rounded-xl mx-auto w-1/2 bg-gray-500 p-4 m-4" data-id="${project.id}">
+            <h2 class="text-3xl font-semibold">${project.name}</h2>
+            <p class="mb-2 py-2">${project.desc}</p>
             <button class="modBtn bg-yellow-500 text-white py-1 px-2 rounded mr-2" data-id="${project.id}">Edytuj</button>
             <button class="delBtn bg-red-500 text-white py-1 px-2 rounded mr-2" data-id="${project.id}">Usuń</button>
-            <button class="chooseBtn bg-green-500 text-white py-1 px-2 rounded" data-id="${project.id}">Wybierz projekt</button>
+            <button class="chooseBtn bg-green-500 text-white py-1 px-2 rounded" data-id="${project.id}">Wybierz</button>
           </div>
         `
             ).join("")

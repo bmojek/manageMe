@@ -1,15 +1,15 @@
 import { User } from "./user";
 
 export enum Priority {
-  LOW = "niski",
-  MEDIUM = "średni",
-  HIGH = "wysoki",
+  LOW = "Low",
+  MEDIUM = "Medium",
+  HIGH = "High",
 }
 
 export enum Status {
-  TODO = "todo",
-  DOING = "doing",
-  DONE = "done",
+  TODO = "Todo",
+  DOING = "Doing",
+  DONE = "Done",
 }
 
 export class Task {
@@ -20,10 +20,10 @@ export class Task {
   story: number;
   estimatedTime?: number;
   status: Status;
-  startDate?: Date;
-  endDate?: Date;
-  addedDate: Date;
-  startWorkDate?: Date;
+  startDate?: number;
+  endDate?: number;
+  addedDate: number;
+  startWorkDate?: number;
   userAssigned?: User;
 
   constructor(
@@ -34,9 +34,9 @@ export class Task {
     story: number,
     estimatedTime: number,
     status: Status,
-    addedDate: Date,
-    startWorkDate?: Date,
-    endDate?: Date,
+    addedDate: number,
+    startWorkDate?: number,
+    endDate?: number,
     userAssigned?: User
   ) {
     this.id = id;
