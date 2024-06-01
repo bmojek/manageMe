@@ -5,14 +5,10 @@ import { addStory, deleteStory, updateStory } from "../services/projectManager";
 import { refreshProjects } from "../main";
 import { renderStories } from "./storyView";
 
-let userId = "0";
-
 export function renderProjects(
   project: Project | undefined,
   userManager: UserSessionManager
 ): string {
-  if (userManager.loggedInUser) userId = userManager.loggedInUser?.id;
-
   if (!project) {
     return "";
   }

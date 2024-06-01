@@ -18,7 +18,7 @@ export class Task {
   description: string;
   priority: Priority;
   story: number;
-  estimatedTime?: number;
+  estimatedTime?: string;
   status: Status;
   startDate?: number;
   endDate?: number;
@@ -32,7 +32,7 @@ export class Task {
     description: string,
     priority: Priority,
     story: number,
-    estimatedTime: number,
+    estimatedTime: string,
     status: Status,
     addedDate: number,
     startWorkDate?: number,
