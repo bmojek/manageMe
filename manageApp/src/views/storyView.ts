@@ -147,6 +147,7 @@ export function renderStories(
             if (
               updatedTaskName &&
               updatedTaskDescription &&
+              story != undefined &&
               story.id != undefined
             ) {
               const updatedTask: Partial<Task> = {

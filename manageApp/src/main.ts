@@ -48,12 +48,24 @@ export async function refreshProjects() {
            } 
            </a>
         </div>
+        <div>
+        <dialog id="notification" class="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-md absolute top-0 right-0">
+        <h2 class="text-xl font-bold mb-4">Powiadomienia</h2>
+        //TU POWIADOMIENIA
+        <div class="flex justify-end space-x-2">
+          <button id="cancelRegisterButton" class="bg-gray-500 text-white py-2 px-4 rounded" onclick="document.getElementById('notification')?.close()">Zamknij</button>
+        </div>
+      </dialog>
+        </div>
         <div class="absolute right-10 lg:right-[17%] top-5">
+        <i class="alertBox fa fa-bell" style="font-size:24px"></i>
+        
           <label class="inline-flex items-center cursor-pointer">
           <input type="checkbox" value="" id="themeToggle" class="sr-only peer" checked>
   
         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-          <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Ciemny Motyw</span>
+         
+        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Ciemny Motyw</span>
         </label>
         </div>
         ${
@@ -131,7 +143,12 @@ async function handleClick(event: MouseEvent) {
     await deleteProject(projectId);
     await refreshProjects();
   }
+  if ((event.target as HTMLElement).classList.contains("alertBox")) {
+    const dialog = document.getElementById("notification") as HTMLDialogElement | null;
+    dialog?.showModal()
+    
 
+  }
   if ((event.target as HTMLElement).classList.contains("modBtn")) {
     const projectId = (event.target as HTMLElement).getAttribute("data-id");
     if (!projectId) return;
