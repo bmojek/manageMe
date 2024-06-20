@@ -163,7 +163,9 @@ export function renderProjects(
       </td>
     </tr>
   `;
-  const storyItems = project.stories
+  const filterStories = project.stories?.filter((story) => story); //ZROBIC
+
+  const storyItems = filterStories
     ?.map((story) => renderStoryItem(story))
     .join("");
 

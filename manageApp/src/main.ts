@@ -11,13 +11,16 @@ import { renderProjects } from "./views/projectView.ts";
 import { User, mockUsers } from "./models/user.ts";
 import { UserSessionManager } from "./services/userSessionManager.ts";
 import { loginView } from "./views/loginView.ts";
+import { NotificationService } from "./services/notificationService.ts";
 
 const users: User[] = [];
+const notificationService = new NotificationService();
 const userManager = new UserSessionManager();
 users.push(...mockUsers());
 
 export async function refreshProjects() {
   const Projects = await getAllProjects();
+  const notifications = notificationService.list();
   const appDiv = document.querySelector<HTMLDivElement>("#app");
   if (appDiv) {
     appDiv.innerHTML = `
@@ -50,27 +53,37 @@ export async function refreshProjects() {
         </div>
         <div>
         <dialog id="notification" class="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-md absolute top-0 right-0">
-        <h2 class="text-xl font-bold mb-4">Powiadomienia</h2>
-        //TU POWIADOMIENIA
-        <div class="flex justify-end space-x-2">
-          <button id="cancelRegisterButton" class="bg-gray-500 text-white py-2 px-4 rounded" onclick="document.getElementById('notification')?.close()">Zamknij</button>
-        </div>
-      </dialog>
+          <h2 class="text-xl font-bold mb-4">Powiadomienia</h2>
+          ${notifications
+            .map(
+              (n) => `
+            <div class="notificationItem ${
+              n.read ? "read" : "unread"
+            }" data-id="${n.id}">
+              <p>${n.message}</p>
+            </div>
+          `
+            )
+            .join("")}
+          <div class="flex justify-end space-x-2">
+            <button id="cancelRegisterButton" class="bg-gray-500 text-white py-2 px-4 rounded" onclick="document.getElementById('notification')?.close()">Zamknij</button>
+          </div>
+        </dialog>
         </div>
         <div class="absolute right-10 lg:right-[17%] top-5">
-        <i class="alertBox fa fa-bell" style="font-size:24px"></i>
-        
+          <i class="alertBox cursor-pointer fa fa-bell text-orange-500 pr-2" style="font-size:24px"></i>
+          
           <label class="inline-flex items-center cursor-pointer">
           <input type="checkbox" value="" id="themeToggle" class="sr-only peer" checked>
-  
         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
          
         <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Ciemny Motyw</span>
         </label>
         </div>
         ${
-          userManager.currentProjectId == null &&
-          ` <div class="text-center text-3xl my-4"><button class="addBtn bg-blue-500 text-white py-2 px-4 rounded">+</Button></div>`
+          userManager.currentProjectId == null
+            ? ` <div class="text-center text-3xl my-4"><button class="addBtn bg-blue-500 text-white py-2 px-4 rounded">+</Button></div>`
+            : ""
         }
        
         <div class="projectContainer flex-col flex ">
@@ -133,6 +146,14 @@ async function handleClick(event: MouseEvent) {
     }
 
     await createProject({ id: "", name: newName, desc: newDesc });
+    notificationService.send({
+      id: Date.now().toString(),
+      message: `Projekt ${newName} został stworzony.`,
+      date: Date.now().toLocaleString(),
+      priority: "low",
+      title: "Hello",
+      read: false,
+    });
     await refreshProjects();
   }
 
@@ -144,10 +165,10 @@ async function handleClick(event: MouseEvent) {
     await refreshProjects();
   }
   if ((event.target as HTMLElement).classList.contains("alertBox")) {
-    const dialog = document.getElementById("notification") as HTMLDialogElement | null;
-    dialog?.showModal()
-    
-
+    const dialog = document.getElementById(
+      "notification"
+    ) as HTMLDialogElement | null;
+    dialog?.showModal();
   }
   if ((event.target as HTMLElement).classList.contains("modBtn")) {
     const projectId = (event.target as HTMLElement).getAttribute("data-id");
