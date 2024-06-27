@@ -25,6 +25,7 @@ export async function getAllProjects(): Promise<Project[]> {
         id: doc.id,
         name: projectData.name,
         desc: projectData.desc,
+        ownerId: projectData.ownerId,
         stories: projectData.stories,
       };
     });
@@ -42,6 +43,7 @@ export async function createProject(project: Project) {
     await addDoc(projectsCollectionRef, {
       name: project.name,
       desc: project.desc,
+      ownerId: project.ownerId,
     });
   } catch (error) {
     console.error("Error creating project and saving to Firebase:", error);
@@ -58,6 +60,7 @@ export async function getProjectById(id: string): Promise<Project | undefined> {
         id: projectDoc.id,
         name: projectData.name,
         desc: projectData.desc,
+        ownerId: projectData.ownerId,
         stories: projectData.stories,
       };
     } else {

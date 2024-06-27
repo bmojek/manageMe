@@ -18,7 +18,7 @@ export class Story {
   name: string;
   description: string;
   priority: Priority;
-  project: string;
+  project?: string;
   creationDate: number;
   status: Status;
   owner: User;

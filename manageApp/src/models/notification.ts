@@ -1,7 +1,6 @@
 export type ISOString = string;
 
 export type Notification = {
-  id: string;
   title: string;
   message: string;
   date: ISOString;

@@ -14,13 +14,24 @@ import { loginView } from "./views/loginView.ts";
 import { NotificationService } from "./services/notificationService.ts";
 
 const users: User[] = [];
-const notificationService = new NotificationService();
 const userManager = new UserSessionManager();
+const notify = new NotificationService();
 users.push(...mockUsers());
 
 export async function refreshProjects() {
-  const Projects = await getAllProjects();
-  const notifications = notificationService.list();
+  const allProjects = await getAllProjects();
+  const Projects = allProjects.filter((project) => {
+    const isOwner = project.ownerId === userManager.loggedInUser?.id;
+    const isAssignedToTask = project.stories?.some((story) =>
+      story.tasks?.some(
+        (task) =>
+          task.userAssigned?.firstName ===
+            userManager.loggedInUser?.firstName &&
+          task.userAssigned?.lastName === userManager.loggedInUser?.lastName
+      )
+    );
+    return isOwner || isAssignedToTask;
+  });
   const appDiv = document.querySelector<HTMLDivElement>("#app");
   if (appDiv) {
     appDiv.innerHTML = `
@@ -28,7 +39,7 @@ export async function refreshProjects() {
         ${loginView(userManager)}
         <div>
 
-          <a class="navBar navHome hover:text-cyan-500 hover:cursor-pointer ml-4">home</a>
+          <a class="navBar navHome hover:text-cyan-500 hover:cursor-pointer ml-4">~</a>
           <b> / </b>
           <a class="navBar navStory hover:text-cyan-500 hover:cursor-pointer">
            ${
@@ -53,50 +64,55 @@ export async function refreshProjects() {
         </div>
         <div>
         <dialog id="notification" class="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-md absolute top-0 right-0">
-          <h2 class="text-xl font-bold mb-4">Powiadomienia</h2>
-          ${notifications
-            .map(
-              (n) => `
-            <div class="notificationItem ${
-              n.read ? "read" : "unread"
-            }" data-id="${n.id}">
-              <p>${n.message}</p>
-            </div>
-          `
-            )
-            .join("")}
-          <div class="flex justify-end space-x-2">
-            <button id="cancelRegisterButton" class="bg-gray-500 text-white py-2 px-4 rounded" onclick="document.getElementById('notification')?.close()">Zamknij</button>
-          </div>
-        </dialog>
+        <h2 class="text-xl font-bold mb-4">Powiadomienia</h2>
+        
+        <div class="flex justify-end space-x-2">
+          <button id="cancelRegisterButton" class="bg-gray-500 text-white py-2 px-4 rounded" onclick="document.getElementById('notification')?.close()">Zamknij</button>
+        </div>
+      </dialog>
         </div>
         <div class="absolute right-10 lg:right-[17%] top-5">
-          <i class="alertBox cursor-pointer fa fa-bell text-orange-500 pr-2" style="font-size:24px"></i>
-          
+        <i class="alertBox cursor-pointer text-orange-500 fa fa-bell" style="font-size:24px"></i>
+        
           <label class="inline-flex items-center cursor-pointer">
           <input type="checkbox" value="" id="themeToggle" class="sr-only peer" checked>
+  
         <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
          
         <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Ciemny Motyw</span>
         </label>
         </div>
         ${
-          userManager.currentProjectId == null
+          userManager.currentProjectId == null && userManager.loggedInUser
             ? ` <div class="text-center text-3xl my-4"><button class="addBtn bg-blue-500 text-white py-2 px-4 rounded">+</Button></div>`
             : ""
         }
-       
+       ${
+         !userManager.loggedInUser
+           ? `<div class="text-4xl hover:text-gray-400 text-center mt-[25%]">Zaloguj się zeby zobaczyć projekty</div>`
+           : ``
+       }
         <div class="projectContainer flex-col flex ">
       ${
         userManager.currentProjectId == null
           ? Projects.map(
               (project) => `
-          <div class=" border rounded-xl mx-auto w-1/2 bg-gray-500 p-4 m-4" data-id="${project.id}">
+          <div class=" border-2 rounded-xl mx-auto w-1/2 bg-gray-300 dark:bg-gray-500 ${
+            project.ownerId === userManager.loggedInUser?.id
+              ? `border-green-600`
+              : `border-orange-500`
+          } p-4 m-4" data-id="${project.id}">
             <h2 class="text-3xl font-semibold">${project.name}</h2>
             <p class="mb-2 py-2">${project.desc}</p>
-            <button class="modBtn bg-yellow-500 text-white py-1 px-2 rounded mr-2" data-id="${project.id}">Edytuj</button>
-            <button class="delBtn bg-red-500 text-white py-1 px-2 rounded mr-2" data-id="${project.id}">Usuń</button>
-            <button class="chooseBtn bg-green-500 text-white py-1 px-2 rounded" data-id="${project.id}">Wybierz</button>
+            <button class="modBtn bg-yellow-500 text-white py-1 px-2 rounded mr-2" data-id="${
+              project.id
+            }">Edytuj</button>
+            <button class="delBtn bg-red-500 text-white py-1 px-2 rounded mr-2" data-id="${
+              project.id
+            }">Usuń</button>
+            <button class="chooseBtn bg-green-500 text-white py-1 px-2 rounded" data-id="${
+              project.id
+            }">Wybierz</button>
           </div>
         `
             ).join("")
@@ -140,21 +156,26 @@ async function handleClick(event: MouseEvent) {
       newName === null ||
       newDesc === null ||
       newName === "" ||
-      newDesc === ""
+      newDesc === "" ||
+      !userManager.loggedInUser
     ) {
       return;
     }
 
-    await createProject({ id: "", name: newName, desc: newDesc });
-    notificationService.send({
-      id: Date.now().toString(),
-      message: `Projekt ${newName} został stworzony.`,
-      date: Date.now().toLocaleString(),
-      priority: "low",
-      title: "Hello",
+    await createProject({
+      name: newName,
+      desc: newDesc,
+      ownerId: userManager.loggedInUser.id,
+    });
+
+    await refreshProjects();
+    notify.send({
+      title: "Nowe powiadomienie",
+      message: "Przykładowa wiadomość",
+      date: new Date().toISOString(),
+      priority: "medium",
       read: false,
     });
-    await refreshProjects();
   }
 
   if ((event.target as HTMLElement).classList.contains("delBtn")) {

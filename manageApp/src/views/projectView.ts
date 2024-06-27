@@ -97,7 +97,8 @@ export function renderProjects(
               updatedStoryName &&
               updatedStoryDescription &&
               storyId != undefined &&
-              userManager.loggedInUser
+              userManager.loggedInUser &&
+              project.id
             ) {
               const updatedStory: Partial<Story> = {
                 id: storyId,
@@ -105,7 +106,6 @@ export function renderProjects(
                 description: updatedStoryDescription,
                 priority: updatedStoryPriority,
                 status: updatedStoryStatus,
-                owner: userManager.loggedInUser,
               };
               updateStory(project.id, updatedStory);
               editDialog?.close();

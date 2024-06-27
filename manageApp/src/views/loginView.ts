@@ -127,9 +127,16 @@ export function loginView(userManager: UserSessionManager): string {
     }
   }
 
-  document.addEventListener("click", () => {
+  window.addEventListener("mouseup", () => {
     const btn = document.getElementById("loginBtn");
     btn?.addEventListener("click", handleLogin);
+    const inputPass = document.getElementById("passwordInput");
+    inputPass?.addEventListener("keypress", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        btn?.click();
+      }
+    });
     const btnR = document.getElementById("registerBtn");
     btnR?.addEventListener("click", () => {
       const registerDialog = document.getElementById(

@@ -71,7 +71,12 @@ export function renderStories(
         }
       });
 
-      if (newTaskName && newTaskDescription && story?.id != null) {
+      if (
+        newTaskName &&
+        newTaskDescription &&
+        story?.id != null &&
+        project.id
+      ) {
         const newTask: Task = {
           id: maxTaskID + 1,
           name: newTaskName,
@@ -148,6 +153,7 @@ export function renderStories(
               updatedTaskName &&
               updatedTaskDescription &&
               story != undefined &&
+              project.id &&
               story.id != undefined
             ) {
               const updatedTask: Partial<Task> = {
@@ -174,14 +180,19 @@ export function renderStories(
       }
     } else if (target.classList.contains("deleteTask")) {
       const taskId = parseInt(target.getAttribute("data-task-id") || "");
-      if (!isNaN(taskId) && story?.id != null) {
+      if (!isNaN(taskId) && story?.id != null && project.id) {
         deleteTask(project.id, story?.id, taskId);
         document.removeEventListener("click", handleClick);
         refreshProjects();
       }
     } else if (target.classList.contains("endTask")) {
       const taskId = parseInt(target.getAttribute("data-task-id") || "");
-      if (!isNaN(taskId) && story?.id != null && story.tasks != null) {
+      if (
+        !isNaN(taskId) &&
+        story?.id != null &&
+        story.tasks != null &&
+        project.id
+      ) {
         const taskToEnd = story.tasks.find((task) => task.id === taskId);
         if (taskToEnd) {
           let updatedTask: Partial<Task>;
@@ -261,7 +272,7 @@ export function renderStories(
                     task.id
                   }">${
                     task.endDate == 0 || task.endDate == undefined
-                      ? `Zakończ Zadanie`
+                      ? `Zakończ`
                       : "Wznów"
                   }</button>`
             }
