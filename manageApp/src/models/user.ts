@@ -28,30 +28,3 @@ export enum UserRole {
   DEVOPS = "devops",
   DEVELOPER = "developer",
 }
-
-export function mockUsers(): User[] {
-  const admin: User = {
-    id: "0",
-    login: "admin",
-    password: "admin",
-    firstName: "Admin",
-    lastName: "Adminowski",
-    role: UserRole.ADMIN,
-  };
-
-  const developer: User = {
-    id: "1",
-    firstName: "Developer",
-    lastName: "Developerski",
-    role: UserRole.DEVELOPER,
-  };
-
-  const devops: User = {
-    id: "2",
-    firstName: "DevOps",
-    lastName: "Devopsowski",
-    role: UserRole.DEVOPS,
-  };
-
-  return [admin, developer, devops];
-}
