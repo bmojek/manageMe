@@ -89,7 +89,14 @@ export function renderStories(
 
         addTask(project.id, story.id, newTask);
         document.removeEventListener("click", handleClick);
-        refreshProjects();
+
+        refreshProjects({
+          title: "Nowe Zadanie !",
+          message: `Zadanie ${newTaskName} zostało dodane`,
+          date: new Date().toISOString(),
+          priority: "low",
+          read: false,
+        });
       }
     } else if (target.classList.contains("exitStory")) {
       userManager.setCurrentStory(null);

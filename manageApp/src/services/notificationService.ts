@@ -25,6 +25,13 @@ export class NotificationService {
   unreadCount(): Observable<number> {
     return this.unreadCountSubject.asObservable();
   }
+  markAsRead(index: number): void {
+    if (index >= 0 && index < this.notifications.length) {
+      this.notifications[index].read = true;
+      this.notificationsSubject.next([...this.notifications]);
+      this.updateUnreadCount();
+    }
+  }
 
   private updateUnreadCount(): void {
     const unreadCount = this.notifications.filter(
@@ -34,6 +41,19 @@ export class NotificationService {
   }
 
   private openDialog(notification: Notification): void {
-    console.log("Dialog opened for notification:", notification);
+    const notificationDialog = document.getElementById("notificationDialog");
+    const notificationTitle = document.getElementById("notificationTitle");
+    const notificationMessage = document.getElementById("notificationMessage");
+
+    if (notificationDialog && notificationTitle && notificationMessage) {
+      notificationTitle.innerText = notification.title;
+      notificationMessage.innerText = notification.message;
+      notificationDialog.classList.remove("hidden");
+      setTimeout(() => {
+        notificationDialog.classList.add("hidden");
+      }, 5000);
+    } else {
+      console.log("Notification dialog element not found.");
+    }
   }
 }

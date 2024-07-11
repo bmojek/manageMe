@@ -1,12 +1,23 @@
-import { getProjectById, getStoryById } from "../services/projectManager";
+import {
+  getProjectById,
+  getStoryById,
+  createProject,
+  deleteProject,
+  updateProject,
+} from "../services/projectManager";
 import { UserSessionManager } from "../services/userSessionManager";
 import { renderProjects } from "../views/projectView";
 import { Project } from "../models/project";
 import { loginView } from "./loginView";
+import { Notification } from "../models/notification";
+import { renderCounter, renderNotifications } from "./notificationRenderer";
+import { NotificationService } from "../services/notificationService";
+import { refreshProjects } from "../main";
 
 export async function ProjectList(
   projects: Project[],
-  userManager: UserSessionManager
+  userManager: UserSessionManager,
+  notify: NotificationService
 ) {
   const appDiv = document.querySelector<HTMLDivElement>("#app");
   if (appDiv) {
@@ -51,8 +62,12 @@ export async function ProjectList(
                         </div>
                     </dialog>
                 </div>
+                 <div class="fixed right-3 top-25 w-80 bg-blue-900 text-white hidden rounded-xl shadow-lg p-4" id="notificationDialog">
+                    <div class="font-bold text-lg" id="notificationTitle"></div>
+                    <div class="mt-2" id="notificationMessage"></div>
+                </div>
                 <div class="absolute right-10 lg:right-[17%] top-5">
-                    <span id="counter" class="absolute alertbox pl-[7px] pointer-events-none pt-0.5 font-bold"></span>
+                    <span id="counter" class="absolute alertbox pl-[7.5px] pointer-events-none pt-0.5 font-bold"></span>
                     <i class="alertBox cursor-pointer text-orange-500 pr-2 fa fa-bell" style="font-size:24px"></i>
                     <label class="inline-flex items-center cursor-pointer">
                         <input type="checkbox" value="" id="themeToggle" class="sr-only peer" checked>
@@ -107,16 +122,26 @@ export async function ProjectList(
                     }
                 </div>
             `;
+    notify.unreadCount().subscribe(renderCounter);
+    notify
+      .list()
+      .subscribe((notifications: Notification[]) =>
+        renderNotifications(notifications, notify)
+      );
+    if (!appDiv.dataset.eventListenersAdded) {
+      appDiv.dataset.eventListenersAdded = "true";
+
+      document.addEventListener("click", handleClick);
+    }
   }
   const themeToggle = document.getElementById(
     "themeToggle"
   ) as HTMLInputElement;
   const isDarkMode = localStorage.getItem("theme") === "dark";
+  themeToggle.checked = isDarkMode;
   if (isDarkMode) {
     document.documentElement.classList.add("dark");
   }
-  themeToggle.checked = isDarkMode;
-
   themeToggle.addEventListener("change", () => {
     if (themeToggle.checked) {
       document.documentElement.classList.add("dark");
@@ -126,4 +151,94 @@ export async function ProjectList(
       localStorage.setItem("theme", "light");
     }
   });
+  async function handleClick(event: MouseEvent) {
+    if ((event.target as HTMLElement).classList.contains("addBtn")) {
+      const newName = prompt("Podaj nazwe projektu:");
+      const newDesc = prompt("Podaj opis projektu:");
+      if (
+        newName === null ||
+        newDesc === null ||
+        newName === "" ||
+        newDesc === "" ||
+        !userManager.loggedInUser
+      ) {
+        return;
+      }
+
+      await createProject({
+        name: newName,
+        desc: newDesc,
+        ownerId: userManager.loggedInUser.id,
+      });
+
+      await refreshProjects({
+        title: "Projekt stworzony!",
+        message: `Nowy projekt ${newName} został dodany`,
+        date: new Date().toISOString(),
+        priority: "medium",
+        read: false,
+      });
+      removeEventListener("click", handleClick);
+    }
+
+    if ((event.target as HTMLElement).classList.contains("delBtn")) {
+      const projectId = (event.target as HTMLElement).getAttribute("data-id");
+      if (!projectId) return;
+
+      await deleteProject(projectId);
+      await refreshProjects();
+    }
+    if ((event.target as HTMLElement).classList.contains("alertBox")) {
+      const dialog = document.getElementById(
+        "notification"
+      ) as HTMLDialogElement | null;
+      dialog?.showModal();
+    }
+    if ((event.target as HTMLElement).classList.contains("modBtn")) {
+      const projectId = (event.target as HTMLElement).getAttribute("data-id");
+      if (!projectId) return;
+
+      const project = await getProjectById(projectId);
+      if (!project) return;
+
+      const newName = prompt("Podaj nazwe projektu:", project.name);
+      const newDesc = prompt("Podaj opis projektu:", project.desc);
+
+      if (
+        newName === null ||
+        newDesc === null ||
+        newName === "" ||
+        newDesc === ""
+      ) {
+        return;
+      }
+
+      await updateProject(projectId, { name: newName, desc: newDesc });
+      await refreshProjects();
+    }
+
+    if ((event.target as HTMLElement).classList.contains("chooseBtn")) {
+      const projectId = (event.target as HTMLElement).getAttribute("data-id");
+      if (!projectId) return;
+
+      userManager.setCurrentProject(projectId);
+      await refreshProjects();
+    }
+
+    if ((event.target as HTMLElement).classList.contains("exitProject")) {
+      userManager.setCurrentProject(null);
+      await refreshProjects();
+    }
+
+    if ((event.target as HTMLElement).classList.contains("navStory")) {
+      userManager.setCurrentStory(null);
+      await refreshProjects();
+    }
+
+    if ((event.target as HTMLElement).classList.contains("navHome")) {
+      userManager.setCurrentProject(null);
+      userManager.setCurrentStory(null);
+      await refreshProjects();
+    }
+  }
 }
