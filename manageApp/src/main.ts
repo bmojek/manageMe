@@ -1,6 +1,6 @@
 import "./style.css";
 import { getAllProjects } from "./services/projectManager.ts";
-import { ProjectList } from "./views/projectList.ts";
+import { ProjectView } from "./views/ProjectView.ts";
 import { UserSessionManager } from "./services/userSessionManager.ts";
 import { NotificationService } from "./services/notificationService.ts";
 import { Notification } from "./models/notification.ts";
@@ -24,7 +24,7 @@ export async function refreshProjects(notification?: Notification) {
     return isOwner || isAssignedToTask;
   });
 
-  ProjectList(Projects, userManager, notify);
+  ProjectView(Projects, userManager, notify);
   if (notification) notify.send(notification);
 }
 

@@ -1,343 +1,91 @@
-import { addTask, updateTask, deleteTask } from "../services/projectManager";
-import { UserSessionManager } from "../services/userSessionManager";
-import { Story } from "../models/story";
-import { Priority, Status, Task } from "../models/task";
-import { refreshProjects } from "../main";
 import { Project } from "../models/project";
-import { collection, getDocs, getFirestore } from "firebase/firestore";
-import { app } from "../firebase";
-import { UserRole } from "../models/user";
+import { UserSessionManager } from "../services/userSessionManager";
+import { Story, Priority, Status } from "../models/story";
+import { TaskView } from "./taskView";
 
-export function renderStories(
-  project: Project,
+export function StoryView(
+  project: Project | undefined,
   userManager: UserSessionManager
 ): string {
-  let story: Story | undefined = undefined;
-  if (userManager.currentStoryId != null && project.stories) {
-    story = project.stories.find(
-      (story) => story.id === userManager.currentStoryId
-    );
-  }
-
-  if (!project || !story) {
+  if (!project) {
     return "";
   }
 
-  document.addEventListener("click", handleClick);
+  const renderStoryItem = (story: Story): string => `
+    <tr class="storyItem" data-id="${story.id}">
+      <td class="border px-4 py-2">${story.name}</td>
+      <td class="border px-4 py-2">${story.description}</td>
+      <td class="border px-4 py-2">${story.owner.lastName}</td>
+      <td class="border px-4 py-2">${story.priority}</td>
+      <td class="border px-4 py-2">${story.status}</td>
+      <td class="border px-4 py-2">${new Date(
+        story.creationDate
+      ).toLocaleString()}</td>
+      <td class="border px-4 py-2">
+        <button class="editStoryBtn bg-yellow-500 text-white py-1 px-2 rounded mr-2">Edytuj</button>
+        <button class="deleteStoryBtn bg-red-500 text-white py-1 px-2 rounded mr-2">Usuń</button>
+        <button class="selectBtn bg-green-500 text-white py-1 px-2 rounded">Wybierz</button>
+      </td>
+    </tr>
+  `;
+  const filterStories = project.stories?.filter((story) => story);
 
-  async function populateUserAssignedDropdown() {
-    const db = getFirestore(app);
-    const usersCollectionRef = collection(db, "users");
-    const querySnapshot = await getDocs(usersCollectionRef);
-    const userAssignedDropdown = document.getElementById(
-      "editTaskUserAssigned"
-    ) as HTMLSelectElement;
-    userAssignedDropdown.innerHTML = "";
+  const storyItems = filterStories
+    ?.map((story) => renderStoryItem(story))
+    .join("");
 
-    querySnapshot.forEach((doc) => {
-      const userData = doc.data();
-      if (userData.role != UserRole.ADMIN) {
-        const option = document.createElement("option");
-        option.value = JSON.stringify({
-          id: userData.id,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          role: userData.role,
-        });
-
-        option.textContent = userData.firstName + " (" + userData.role + ")";
-        userAssignedDropdown.appendChild(option);
-      }
-    });
-  }
-
-  populateUserAssignedDropdown();
-
-  async function handleClick(event: MouseEvent) {
-    const target = event.target as HTMLElement;
-    const editDialog = document.getElementById(
-      "editTaskDialog"
-    ) as HTMLDialogElement;
-
-    if (target.classList.contains("addTask")) {
-      const newTaskName = prompt("Enter the name of the new task:");
-      const newTaskDescription = prompt(
-        "Enter the description of the new task:"
-      );
-      let maxTaskID = -1;
-      story?.tasks?.forEach((task) => {
-        if (task.id != undefined && task.id > maxTaskID) {
-          maxTaskID = task.id;
-        }
-      });
-
-      if (
-        newTaskName &&
-        newTaskDescription &&
-        story?.id != null &&
-        project.id
-      ) {
-        const newTask: Task = {
-          id: maxTaskID + 1,
-          name: newTaskName,
-          description: newTaskDescription,
-          priority: Priority.LOW,
-          story: story.id,
-          status: Status.TODO,
-          addedDate: Date.now(),
-        };
-
-        addTask(project.id, story.id, newTask);
-        document.removeEventListener("click", handleClick);
-
-        refreshProjects({
-          title: "Nowe Zadanie !",
-          message: `Zadanie ${newTaskName} zostało dodane`,
-          date: new Date().toISOString(),
-          priority: "low",
-          read: false,
-        });
-      }
-    } else if (target.classList.contains("exitStory")) {
-      userManager.setCurrentStory(null);
-      document.removeEventListener("click", handleClick);
-      refreshProjects();
-    } else if (target.classList.contains("editTask")) {
-      const taskId = parseInt(target.getAttribute("data-task-id") || "");
-      if (!isNaN(taskId) && story?.id != null && story.tasks != null) {
-        const taskToEdit = story.tasks.find((task) => task.id === taskId);
-        if (taskToEdit) {
-          const editTaskNameInput = document.getElementById(
-            "editTaskName"
-          ) as HTMLInputElement;
-          const editTaskDescriptionInput = document.getElementById(
-            "editTaskDescription"
-          ) as HTMLTextAreaElement;
-          const editTaskPrioritySelect = document.getElementById(
-            "editTaskPriority"
-          ) as HTMLSelectElement;
-          const editTaskUserAssignedInput = document.getElementById(
-            "editTaskUserAssigned"
-          ) as HTMLSelectElement;
-          const editTaskEstimatedTimeInput = document.getElementById(
-            "editTaskEstimatedTime"
-          ) as HTMLInputElement;
-
-          editTaskNameInput.value = taskToEdit.name;
-          editTaskDescriptionInput.value = taskToEdit.description;
-          editTaskPrioritySelect.value = taskToEdit.priority;
-          editTaskEstimatedTimeInput.value =
-            taskToEdit.estimatedTime?.toString() || "";
-
-          if (taskToEdit.userAssigned) {
-            editTaskUserAssignedInput.value = JSON.stringify(
-              taskToEdit.userAssigned
-            );
-          }
-
-          editDialog?.showModal();
-
-          const saveButton = document.getElementById(
-            "saveTaskButton"
-          ) as HTMLButtonElement;
-
-          const saveListener = () => {
-            const updatedTaskName = editTaskNameInput.value;
-            const updatedTaskDescription = editTaskDescriptionInput.value;
-            const updatedTaskPriority =
-              editTaskPrioritySelect.value as Priority;
-            const updatedTaskUserAssigned = editTaskUserAssignedInput.value;
-            const updatedTaskEstimatedTime =
-              new Date(editTaskEstimatedTimeInput.value) > new Date(Date.now())
-                ? editTaskEstimatedTimeInput.value
-                : undefined;
-            let updatedTaskStatus = Status.TODO;
-
-            if (updatedTaskUserAssigned != undefined)
-              updatedTaskStatus = Status.DOING;
-
-            if (
-              updatedTaskName &&
-              updatedTaskDescription &&
-              story != undefined &&
-              project.id &&
-              story.id != undefined
-            ) {
-              const updatedTask: Partial<Task> = {
-                id: taskId,
-                name: updatedTaskName,
-                description: updatedTaskDescription,
-                startWorkDate: updatedTaskUserAssigned ? Date.now() : undefined,
-                priority: updatedTaskPriority,
-                status: updatedTaskStatus,
-                userAssigned: JSON.parse(updatedTaskUserAssigned),
-                estimatedTime: updatedTaskEstimatedTime,
-              };
-              updateTask(project.id, story.id, updatedTask);
-              editDialog?.close();
-              refreshProjects();
-            }
-          };
-
-          saveButton?.addEventListener("click", saveListener);
-          editDialog?.addEventListener("close", () => {
-            saveButton?.removeEventListener("click", saveListener);
-          });
-        }
-      }
-    } else if (target.classList.contains("deleteTask")) {
-      const taskId = parseInt(target.getAttribute("data-task-id") || "");
-      if (!isNaN(taskId) && story?.id != null && project.id) {
-        deleteTask(project.id, story?.id, taskId);
-        document.removeEventListener("click", handleClick);
-        refreshProjects();
-      }
-    } else if (target.classList.contains("endTask")) {
-      const taskId = parseInt(target.getAttribute("data-task-id") || "");
-      if (
-        !isNaN(taskId) &&
-        story?.id != null &&
-        story.tasks != null &&
-        project.id
-      ) {
-        const taskToEnd = story.tasks.find((task) => task.id === taskId);
-        if (taskToEnd) {
-          let updatedTask: Partial<Task>;
-          if (taskToEnd.status === Status.DONE) {
-            updatedTask = {
-              id: taskId,
-              status: Status.DOING,
-              endDate: 0,
-            };
-          } else {
-            updatedTask = {
-              id: taskId,
-              status: Status.DONE,
-              endDate: Date.now(),
-            };
-          }
-
-          updateTask(project.id, story.id, updatedTask);
-          document.removeEventListener("click", handleClick);
-          refreshProjects();
-        }
-      }
-    }
-  }
-
-  const tasksByStatus = {
-    [Status.TODO]:
-      story.tasks?.filter((task) => task.status === Status.TODO) || [],
-    [Status.DOING]:
-      story.tasks?.filter((task) => task.status === Status.DOING) || [],
-    [Status.DONE]:
-      story.tasks?.filter((task) => task.status === Status.DONE) || [],
-  };
-
-  const renderTasks = (tasks: Task[]) => {
-    return tasks
-      .map(
-        (task) =>
-          `<div class="p-4 w-[17em] mx-auto m-4 bg-white dark:bg-gray-700 shadow-md rounded-lg mb-4">
-            <h3 class="text-xl font-semibold mb-2">${task.name}</h3>
-            <p class="mb-2">Opis: ${task.description}</p>
-            <p class="mb-2">Priorytet: ${task.priority}</p>
-            <p class="mb-2">Status: ${task.status}</p>
-            <p class="mb-2">Data Utworzenia: ${new Date(
-              task.addedDate
-            ).toLocaleString()}</p>
-            ${
-              task.startWorkDate == undefined
-                ? ``
-                : `<p class="mb-2">Data Startu: ${new Date(
-                    task.startWorkDate
-                  ).toLocaleString()}</p>`
-            }
-            ${
-              task.endDate === undefined || task.endDate === 0
-                ? ``
-                : `<p class="mb-2">Data Zakończenia: ${new Date(
-                    task.endDate
-                  ).toLocaleString()}</p>`
-            }
-            <p class="mb-2">Wykonawca: ${
-              task.userAssigned ? task.userAssigned?.firstName : "<i>brak</i>"
-            }</p>
-            <p class="mb-2">Przewidywany czas wykonania: ${
-              task.estimatedTime ? task.estimatedTime : "<i>brak</i>"
-            }</            ><div class="flex space-x-2">
-            <button class="editTask bg-yellow-500 text-white py-1 px-2 rounded" data-task-id="${
-              task.id
-            }">Edytuj</button>
-            <button class="deleteTask bg-red-500 text-white py-1 px-2 rounded" data-task-id="${
-              task.id
-            }">Usuń</button>
-            ${
-              task.userAssigned === undefined
-                ? ""
-                : ` <button class="endTask bg-green-700 text-white py-1 px-2 rounded" data-task-id="${
-                    task.id
-                  }">${
-                    task.endDate == 0 || task.endDate == undefined
-                      ? `Zakończ`
-                      : "Wznów"
-                  }</button>`
-            }
-          </div>
-        </div>`
-      )
-      .join("");
-  };
-
-  const tasksList = `
-  <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
-    <div class="col-span-1">
-      <h2 class="text-lg text-center font-semibold mb-4">TODO</h2>
-      ${renderTasks(tasksByStatus[Status.TODO])}
-    </div>
-    <div class="col-span-1 ">
-      <h2 class="text-lg text-center font-semibold mb-4">DOING</h2>
-      ${renderTasks(tasksByStatus[Status.DOING])}
-    </div>
-    <div class="col-span-1">
-      <h2 class="text-lg text-center font-semibold mb-4">DONE</h2>
-      ${renderTasks(tasksByStatus[Status.DONE])}
-    </div>
+  return `${
+    userManager.currentStoryId == null
+      ? `<div class="projectDetails p-4 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-md">
+  <div class="projectInfo" data-id="${project.id}">   
+    <button class="exitProject px-10 text-lg font-bold mb-2">←</button>    
+    <h2 class="text-2xl font-bold mb-4">Nazwa: ${project.name}</h2>
+    <p class="mb-4">Opis: ${project.desc}</p>
+    <button class="addStoryBtn bg-blue-500 text-white py-2 px-4 rounded mb-4">Dodaj story</button>
   </div>
-`;
-
-  return `
-  <div class="p-4 bg-gray-100  dark:bg-gray-800 rounded-lg shadow-md">
-    <div class="inline-block mb-4">
-      <button class="exitStory  px-10 text-lg font-bold mb-2">←</button>
-      <h1 class="text-2xl font-bold mb-4">Story: ${story.name}</h1>
-      <button class="addTask bg-blue-500 text-white py-2 px-4 rounded">Dodaj Zadanie</button>
-    </div>
-    <dialog id="editTaskDialog" class="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-md">
-      <h2 class="text-xl font-bold mb-4">Edytuj Zadanie</h2>
-      <label for="editTaskName" class="block mb-2">Nazwa zadania:</label>
-      <input type="text" id="editTaskName" name="editTaskName" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800">
-      <label for="editTaskDescription" class="block mb-2">Opis:</label>
-      <textarea id="editTaskDescription" name="editTaskDescription" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800"></textarea>
-      <label for="editTaskPriority" class="block mb-2">Priorytet:</label>
-      <select id="editTaskPriority" name="editTaskPriority" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800">
-        <option value="${Priority.LOW}">Low</option>
-        <option value="${Priority.MEDIUM}">Medium</option>
-        <option value="${Priority.HIGH}">High</option>
-      </select>
-      <label for="editTaskUserAssigned" class="block mb-2">Wykonawca:</label>
-      <select id="editTaskUserAssigned" name="editTaskUserAssigned" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800">
-      
-      </select>
-      <label for="editTaskEstimatedTime" class="block mb-2">Przewidywany czas wykonania (dni):</label>
-      <input type="date" id="editTaskEstimatedTime" name="editTaskEstimatedTime" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800">
-      <div class="flex justify-end space-x-2">
-        <button id="saveTaskButton" class="bg-green-500 text-white py-2 px-4 rounded">Save</button>
-        <button id="cancelEditTaskButton" class="bg-gray-500 text-white py-2 px-4 rounded" onclick="document.getElementById('editTaskDialog').close()">Cancel</button>
-      </div>
-    </dialog>
-    <div class="taskList">
-      ${tasksList}
-    </div>
-  </div>`;
+  <dialog id="editStoryDialog" class="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-md w-1/2">
+        <h2 class="text-xl font-bold mb-4">Edytuj Story</h2>
+        <label for="editStoryName" class="block mb-2">Nazwa:</label>
+        <input type="text" id="editStoryName" name="editStoryName" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800">
+        <label for="editStoryDescription" class="block mb-2">Opis:</label>
+        <textarea id="editStoryDescription" name="editStoryDescription" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800"></textarea>
+        <label for="editStoryPriority" class="block mb-2">Priorytet:</label>
+        <select id="editStoryPriority" name="editStoryPriority" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800">
+          <option value="${Priority.LOW}">Low</option>
+          <option value="${Priority.MEDIUM}">Medium</option>
+          <option value="${Priority.HIGH}">High</option>
+        </select>
+        <label for="editStoryStatus" class="block mb-2">Status:</label>
+        <select id="editStoryStatus" name="editStoryStatus" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800">
+          <option value="${Status.TODO}">To Do</option>
+          <option value="${Status.DOING}">In Progress</option>
+          <option value="${Status.DONE}">Done</option>
+        </select>
+        
+        <div class="flex justify-end space-x-2">
+          <button id="saveStoryButton" class="bg-green-500 text-white py-2 px-4 rounded">Edytuj</button>
+          <button id="cancelEditStoryButton" class="bg-gray-500 text-white py-2 px-4 rounded" onclick="document.getElementById('editStoryDialog').close()">Anuluj</button>
+        </div>
+      </dialog>
+  <table class="storyTable  w-full bg-white dark:bg-gray-700">
+    <thead class="bg-gray-200 dark:bg-gray-600">
+      <tr>
+        <th class="border  py-2">Nazwa</th>
+        <th class="border  py-2">Opis</th>
+        <th class="border  py-2">Właściciel</th>
+        <th class="border  py-2">Priorytet</th>
+        <th class="border  py-2">Status</th>
+        <th class="border  py-2">Data utworzenia</th>
+        <th class="border  py-2">Akcje</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${storyItems}
+    </tbody>
+  </table>
+  
+</div>`
+      : TaskView(project, userManager)
+  }
+  `;
 }

@@ -51,7 +51,7 @@ export class NotificationService {
       notificationDialog.classList.remove("hidden");
       setTimeout(() => {
         notificationDialog.classList.add("hidden");
-      }, 5000);
+      }, 3000);
     } else {
       console.log("Notification dialog element not found.");
     }

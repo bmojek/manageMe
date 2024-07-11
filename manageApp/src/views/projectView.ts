@@ -1,224 +1,153 @@
-import { Project } from "../models/project";
+import { getProjectById, getStoryById } from "../services/projectManager";
 import { UserSessionManager } from "../services/userSessionManager";
-import { Story, Priority, Status } from "../models/story";
-import { addStory, deleteStory, updateStory } from "../services/projectManager";
-import { refreshProjects } from "../main";
-import { renderStories } from "./storyView";
+import { StoryView } from "./storyView";
+import { Project } from "../models/project";
+import { loginView } from "./loginView";
+import { Notification } from "../models/notification";
+import {
+  renderCounter,
+  renderNotifications,
+} from "../services/notificationRenderer";
+import { NotificationService } from "../services/notificationService";
+import { handleClick } from "../services/handleClick";
 
-export function renderProjects(
-  project: Project | undefined,
-  userManager: UserSessionManager
-): string {
-  if (!project) {
-    return "";
-  }
-  document.addEventListener("click", handleClick2);
-
-  const renderStoryItem = (story: Story): string => `
-    <tr class="storyItem" data-id="${story.id}">
-      <td class="border px-4 py-2">${story.name}</td>
-      <td class="border px-4 py-2">${story.description}</td>
-      <td class="border px-4 py-2">${story.owner.lastName}</td>
-      <td class="border px-4 py-2">${story.priority}</td>
-      <td class="border px-4 py-2">${story.status}</td>
-      <td class="border px-4 py-2">${new Date(
-        story.creationDate
-      ).toLocaleString()}</td>
-      <td class="border px-4 py-2">
-        <button class="editStoryBtn bg-yellow-500 text-white py-1 px-2 rounded mr-2">Edytuj</button>
-        <button class="deleteStoryBtn bg-red-500 text-white py-1 px-2 rounded mr-2">Usuń</button>
-        <button class="selectBtn bg-green-500 text-white py-1 px-2 rounded">Wybierz</button>
-      </td>
-    </tr>
-  `;
-  const filterStories = project.stories?.filter((story) => story);
-
-  const storyItems = filterStories
-    ?.map((story) => renderStoryItem(story))
-    .join("");
-
-  return `${
-    userManager.currentStoryId == null
-      ? `<div class="projectDetails p-4 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-md">
-  <div class="projectInfo" data-id="${project.id}">   
-    <button class="exitProject px-10 text-lg font-bold mb-2">←</button>    
-    <h2 class="text-2xl font-bold mb-4">Nazwa: ${project.name}</h2>
-    <p class="mb-4">Opis: ${project.desc}</p>
-    <button class="addStoryBtn bg-blue-500 text-white py-2 px-4 rounded mb-4">Dodaj story</button>
-  </div>
-  <dialog id="editStoryDialog" class="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-md w-1/2">
-        <h2 class="text-xl font-bold mb-4">Edit Story</h2>
-        <label for="editStoryName" class="block mb-2">Story Name:</label>
-        <input type="text" id="editStoryName" name="editStoryName" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800">
-        <label for="editStoryDescription" class="block mb-2">Story Description:</label>
-        <textarea id="editStoryDescription" name="editStoryDescription" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800"></textarea>
-        <label for="editStoryPriority" class="block mb-2">Story Priority:</label>
-        <select id="editStoryPriority" name="editStoryPriority" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800">
-          <option value="${Priority.LOW}">Low</option>
-          <option value="${Priority.MEDIUM}">Medium</option>
-          <option value="${Priority.HIGH}">High</option>
-        </select>
-        <label for="editStoryStatus" class="block mb-2">Story Status:</label>
-        <select id="editStoryStatus" name="editStoryStatus" class="w-full p-2 mb-4 border rounded-lg dark:bg-gray-800">
-          <option value="${Status.TODO}">To Do</option>
-          <option value="${Status.DOING}">In Progress</option>
-          <option value="${Status.DONE}">Done</option>
-        </select>
-        
-        <div class="flex justify-end space-x-2">
-          <button id="saveStoryButton" class="bg-green-500 text-white py-2 px-4 rounded">Save</button>
-          <button id="cancelEditStoryButton" class="bg-gray-500 text-white py-2 px-4 rounded" onclick="document.getElementById('editStoryDialog').close()">Cancel</button>
-        </div>
-      </dialog>
-  <table class="storyTable  w-full bg-white dark:bg-gray-700">
-    <thead class="bg-gray-200 dark:bg-gray-600">
-      <tr>
-        <th class="border  py-2">Nazwa</th>
-        <th class="border  py-2">Opis</th>
-        <th class="border  py-2">Właściciel</th>
-        <th class="border  py-2">Priorytet</th>
-        <th class="border  py-2">Status</th>
-        <th class="border  py-2">Data utworzenia</th>
-        <th class="border  py-2">Akcje</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${storyItems}
-    </tbody>
-  </table>
-  
-</div>`
-      : renderStories(project, userManager)
-  }
-  `;
-  function handleClick2(event: MouseEvent) {
-    const editDialog = document.getElementById(
-      "editStoryDialog"
-    ) as HTMLDialogElement;
-    const target = event.target as HTMLElement;
-    if (target.classList.contains("addStoryBtn")) {
-      if (project?.id) {
-        const newStoryName = prompt("Enter the name of the new story:");
-        const newStoryDescription = prompt(
-          "Enter the description of the new story:"
-        );
-        let maxID = -1;
-
-        project.stories?.forEach((story) => {
-          if (story.id != undefined && story.id > maxID) {
-            maxID = story.id;
-          }
-        });
-
-        if (newStoryName && newStoryDescription && userManager.loggedInUser) {
-          const newStory: Story = {
-            id: maxID + 1,
-            name: newStoryName,
-            description: newStoryDescription,
-            priority: Priority.LOW,
-            project: project.id,
-            creationDate: Date.now(),
-            status: Status.TODO,
-            owner: userManager.loggedInUser,
-          };
-
-          if (newStory && project.id) {
-            addStory(project.id, newStory);
-          }
-          document.removeEventListener("click", handleClick2);
-          refreshProjects();
-        }
-      }
-    } else if (target.classList.contains("editStoryBtn")) {
-      const storyId = parseInt(
-        target.closest(".storyItem")?.getAttribute("data-id") || ""
+var event = true;
+export async function ProjectView(
+  projects: Project[],
+  userManager: UserSessionManager,
+  notify: NotificationService
+) {
+  const appDiv = document.querySelector<HTMLDivElement>("#app");
+  if (appDiv) {
+    appDiv.innerHTML = `
+                <h1 class="text-2xl font-bold mb-4">MenageAPP</h1>
+                ${loginView(userManager)}
+                <div>
+                    <a class="navBar navHome hover:text-cyan-500 hover:cursor-pointer ml-4">~</a>
+                    <b> / </b>
+                    <a class="navBar navStory hover:text-cyan-500 hover:cursor-pointer">
+                        ${
+                          userManager.currentProjectId != null
+                            ? (
+                                await getProjectById(
+                                  userManager.currentProjectId
+                                )
+                              )?.name
+                            : ""
+                        } 
+                    </a>
+                    ${userManager.currentProjectId != null ? "<b> / </b>" : ""}
+                    <a class="navBar navTask hover:text-cyan-500 hover:cursor-pointer">
+                        ${
+                          userManager.currentStoryId != null &&
+                          userManager.currentProjectId
+                            ? (
+                                await getStoryById(
+                                  userManager.currentProjectId,
+                                  userManager.currentStoryId
+                                )
+                              )?.name
+                            : ""
+                        } 
+                    </a>
+                </div>
+                <div>
+                    <dialog id="notification" class="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-md">
+                        <h2 class="text-xl font-bold mb-4">Powiadomienia</h2>
+                        <div id="notification-container"><p class="text-center py-5">Pusto</p></div>
+                        <div class="flex justify-end space-x-2">
+                            <button id="cancelRegisterButton" class="bg-gray-500 text-white py-2 px-4 rounded" onclick="document.getElementById('notification')?.close()">Zamknij</button>
+                        </div>
+                    </dialog>
+                </div>
+                 <div class="fixed right-3 top-25 w-80 bg-blue-900 text-white hidden rounded-xl shadow-lg p-4" id="notificationDialog">
+                    <div class="font-bold text-lg" id="notificationTitle"></div>
+                    <div class="mt-2" id="notificationMessage"></div>
+                </div>
+                <div class="absolute right-10 lg:right-[17%] top-5">
+                    <span id="counter" class="absolute alertbox pl-[7.5px] pointer-events-none pt-0.5 font-bold"></span>
+                    <i class="alertBox cursor-pointer text-orange-500 pr-2 fa fa-bell" style="font-size:24px"></i>
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" value="" id="themeToggle" class="sr-only peer" checked>
+                        <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>   
+                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Ciemny Motyw</span>
+                    </label>
+                </div>
+                ${
+                  userManager.currentProjectId == null &&
+                  userManager.loggedInUser
+                    ? ` <div class="text-center text-3xl my-4"><button class="addBtn bg-blue-500 text-white py-2 px-4 rounded">+</Button></div>`
+                    : ""
+                }
+                ${
+                  !userManager.loggedInUser
+                    ? `<div class="text-4xl hover:text-gray-400 text-center mt-[25%]">Zaloguj się zeby zobaczyć projekty</div>`
+                    : ``
+                }
+                <div class="projectContainer flex-col  ${
+                  !userManager.loggedInUser ? "hidden" : "flex"
+                } ">
+                    ${
+                      userManager.currentProjectId == null
+                        ? projects
+                            .map(
+                              (project) => `
+                                    <div class="  border-r-8 rounded-md mx-auto w-1/2 bg-gray-300 dark:bg-gray-500 ${
+                                      project.ownerId ===
+                                      userManager.loggedInUser?.id
+                                        ? `border-green-600`
+                                        : `border-orange-500`
+                                    } p-4 m-4" data-id="${project.id}">
+                                        <h2 class="text-3xl font-semibold">${
+                                          project.name
+                                        }</h2>
+                                        <p class="mb-2 py-2">${project.desc}</p>
+                                        <button class="modBtn bg-yellow-500 text-white py-1 px-2 rounded mr-2" data-id="${
+                                          project.id
+                                        }">Edytuj</button>
+                                        <button class="delBtn bg-red-500 text-white py-1 px-2 rounded mr-2" data-id="${
+                                          project.id
+                                        }">Usuń</button>
+                                        <button class="chooseBtn bg-green-500 text-white py-1 px-2 rounded" data-id="${
+                                          project.id
+                                        }">Wybierz</button>
+                                    </div>
+                                `
+                            )
+                            .join("")
+                        : StoryView(
+                            await getProjectById(userManager.currentProjectId),
+                            userManager
+                          )
+                    }
+                </div>
+            `;
+    notify.unreadCount().subscribe(renderCounter);
+    notify
+      .list()
+      .subscribe((notifications: Notification[]) =>
+        renderNotifications(notifications, notify)
       );
-      if (storyId != undefined && project?.stories != undefined) {
-        const storyToEdit = project?.stories.find(
-          (story) => story.id === storyId
-        );
-
-        if (!isNaN(storyId) && storyToEdit != null) {
-          const editStoryNameInput = document.getElementById(
-            "editStoryName"
-          ) as HTMLInputElement;
-          const editStoryDescriptionInput = document.getElementById(
-            "editStoryDescription"
-          ) as HTMLTextAreaElement;
-          const editStoryPrioritySelect = document.getElementById(
-            "editStoryPriority"
-          ) as HTMLSelectElement;
-          const editStoryStatusSelect = document.getElementById(
-            "editStoryStatus"
-          ) as HTMLSelectElement;
-
-          editStoryNameInput.value = storyToEdit.name;
-          editStoryDescriptionInput.value = storyToEdit.description;
-          editStoryPrioritySelect.value = storyToEdit.priority;
-          editStoryStatusSelect.value = storyToEdit.status;
-
-          editDialog?.showModal();
-
-          const saveButton = document.getElementById(
-            "saveStoryButton"
-          ) as HTMLButtonElement;
-          const saveListener = () => {
-            const updatedStoryName = editStoryNameInput.value;
-            const updatedStoryDescription = editStoryDescriptionInput.value;
-            const updatedStoryPriority =
-              editStoryPrioritySelect.value as Priority;
-            const updatedStoryStatus = editStoryStatusSelect.value as Status;
-
-            if (
-              updatedStoryName &&
-              updatedStoryDescription &&
-              storyId != undefined &&
-              userManager.loggedInUser &&
-              project.id
-            ) {
-              const updatedStory: Partial<Story> = {
-                id: storyId,
-                name: updatedStoryName,
-                description: updatedStoryDescription,
-                priority: updatedStoryPriority,
-                status: updatedStoryStatus,
-              };
-              updateStory(project.id, updatedStory);
-              editDialog?.close();
-              refreshProjects();
-            }
-          };
-          saveButton?.addEventListener("click", saveListener);
-          editDialog?.addEventListener("close", () => {
-            saveButton?.removeEventListener("click", saveListener);
-          });
-        }
-      }
-    } else if (target.classList.contains("deleteStoryBtn")) {
-      const storyId = parseInt(
-        target.closest(".storyItem")?.getAttribute("data-id") || ""
-      );
-      if (!isNaN(storyId)) {
-        const confirmDelete = confirm("Napewno chcesz usunąć to story?");
-        if (confirmDelete && project?.id) {
-          deleteStory(project.id, storyId);
-        }
-        document.removeEventListener("click", handleClick2);
-        refreshProjects();
-      }
-    } else if (target.classList.contains("selectBtn")) {
-      const storyId = parseInt(
-        target.closest(".storyItem")?.getAttribute("data-id") || ""
-      );
-
-      if (!isNaN(storyId)) {
-        userManager.setCurrentStory(storyId);
-      }
-      document.removeEventListener("click", handleClick2);
-      refreshProjects();
-    } else if (target.classList.contains("exitStory")) {
-      document.removeEventListener("click", handleClick2);
-      userManager.setCurrentStory(null);
+    if (event) {
+      event = false;
+      document.addEventListener("click", (e) => handleClick(e, userManager));
     }
   }
+  const themeToggle = document.getElementById(
+    "themeToggle"
+  ) as HTMLInputElement;
+  const isDarkMode = localStorage.getItem("theme") === "dark";
+  themeToggle.checked = isDarkMode;
+  if (isDarkMode) {
+    document.documentElement.classList.add("dark");
+  }
+  themeToggle.addEventListener("change", () => {
+    if (themeToggle.checked) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  });
 }

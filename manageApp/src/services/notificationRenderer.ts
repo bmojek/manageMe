@@ -1,5 +1,5 @@
 import { Notification } from "../models/notification.ts";
-import { NotificationService } from "../services/notificationService.ts";
+import { NotificationService } from "./notificationService.ts";
 
 export function renderNotifications(
   notifications: Notification[],
@@ -12,7 +12,7 @@ export function renderNotifications(
         (notification, index) => `
       <div class="notification ${
         notification.read ? "opacity-25" : ""
-      } border-t-2 cursor-pointer p-4 my-5" data-index="${index}">
+      } border-b-2 cursor-pointer p-4 my-5" data-index="${index}">
         <h3 class="text-lg font-bold">${notification.title}</h3>
         <p>${notification.message}</p>
         <div class="date float-end text-xs">${new Date(
