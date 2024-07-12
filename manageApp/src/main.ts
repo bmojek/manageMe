@@ -1,6 +1,6 @@
 import "./style.css";
 import { getAllProjects } from "./services/projectManager.ts";
-import { ProjectView } from "./views/ProjectView.ts";
+import { ProjectView } from "./views/projectView.ts";
 import { UserSessionManager } from "./services/userSessionManager.ts";
 import { NotificationService } from "./services/notificationService.ts";
 import { Notification } from "./models/notification.ts";
