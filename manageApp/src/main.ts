@@ -4,6 +4,7 @@ import { ProjectView } from "./views/ProjectView.ts";
 import { UserSessionManager } from "./services/userSessionManager.ts";
 import { NotificationService } from "./services/notificationService.ts";
 import { Notification } from "./models/notification.ts";
+import { ensureValidToken } from "./services/jwt.ts";
 
 const userManager = new UserSessionManager();
 const notify = new NotificationService();
@@ -26,6 +27,18 @@ export async function refreshProjects(notification?: Notification) {
 
   ProjectView(Projects, userManager, notify);
   if (notification) notify.send(notification);
+  if (userManager.loggedInUser) {
+    if ((await ensureValidToken()) == 0) {
+      userManager.logout();
+      refreshProjects({
+        title: "Sesja wygasła!",
+        message: `Twoja sesja wygasła zaloguj się ponownie`,
+        date: new Date().toISOString(),
+        priority: "high",
+        read: false,
+      });
+    }
+  }
 }
 
 refreshProjects();

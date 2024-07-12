@@ -7,13 +7,19 @@ const app = express();
 const port = 3000;
 
 const tokenSecret = process.env.TOKEN_SECRET as string;
-let refreshToken: string;
+const firebaseConfig = process.env.FIREBASECONFIG as string;
+let refreshToken: string | null = null;
 
 app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("Hello World - simple api with JWT!");
+  res.send(`Hello World - simple api with JWT!`);
+});
+app.post("/apikey", function (req, res) {
+  if (req.body.pass === "passapikey")
+    res.status(200).send(JSON.parse(firebaseConfig));
+  else res.status(400).send("wrong api password");
 });
 app.post("/token", function (req, res) {
   const expTime = req.body.exp || 60;
@@ -23,15 +29,16 @@ app.post("/token", function (req, res) {
 });
 app.post("/refreshToken", function (req, res) {
   const refreshTokenFromPost = req.body.refreshToken;
+
   if (refreshToken !== refreshTokenFromPost) {
     res.status(400).send("Bad refresh token!");
+    return;
   }
+
   const expTime = req.headers.exp || 60;
   const token = generateToken(+expTime);
   refreshToken = generateToken(60 * 60);
-  setTimeout(() => {
-    res.status(200).send({ token, refreshToken });
-  }, 3000);
+  res.status(200).send({ token, refreshToken });
 });
 app.get("/protected/:id/:delay?", verifyToken, (req, res) => {
   const id = req.params.id;
